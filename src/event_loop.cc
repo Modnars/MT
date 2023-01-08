@@ -31,12 +31,12 @@ void EventLoop::clean_delayed_call() {
 }
 
 void EventLoop::run_once() {
-    std::optional<duration_ms> time_out;
+    std::optional<duration_type> time_out;
     if (!ready_.empty()) {
         time_out.emplace(0);
     } else if (!scheduled_.empty()) {
         auto&& [when, _] = scheduled_[0];
-        time_out = std::max(when - time(), duration_ms(0));
+        time_out = std::max(when - time(), duration_type(0));
     }
 
     auto event_lists = selector_.select(time_out.has_value() ? time_out->count() : -1);

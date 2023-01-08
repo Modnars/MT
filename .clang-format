@@ -31,3 +31,6 @@ AlignConsecutiveMacros: true
 AlignConsecutiveAssignments: false
 Cpp11BracedListStyle: true
 SpaceInEmptyBlock: true  # 空代码块使用单个空格填充
+
+# clang-format 15
+IndentRequiresClause: false

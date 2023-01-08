@@ -22,7 +22,7 @@ namespace mt {
 
 class EventLoop : private NonCopyable {
 public:
-    using duration_ms = std::chrono::milliseconds;
+    using duration_type = std::chrono::milliseconds;
     using clock_type = std::chrono::steady_clock;
     using time_point_type = std::chrono::time_point<clock_type>;
 
@@ -51,7 +51,7 @@ public:
 public:
     EventLoop() : start_time_(clock_type::now()) { }
 
-    duration_ms time() { return std::chrono::duration_cast<duration_ms>(clock_type::now() - start_time_); }
+    duration_type time() { return std::chrono::duration_cast<duration_type>(clock_type::now() - start_time_); }
 
     void cancel_handle(Handle& handle) {
         handle.set_state(Handle::STATE::UNSCHEDULED);
@@ -65,7 +65,7 @@ public:
 
     template <typename _Rep, typename _Period>
     void call_later(std::chrono::duration<_Rep, _Period> delay, Handle& call_back) {
-        call_at(time() + std::chrono::duration_cast<duration_ms>(delay), call_back);
+        call_at(time() + std::chrono::duration_cast<duration_type>(delay), call_back);
     }
 
     [[nodiscard]] auto wait_event(const Event& event) { return WaitEventAwaiter{selector_, event}; }
@@ -80,7 +80,7 @@ private:
     template <typename _Rep, typename _Period>
     void call_at(std::chrono::duration<_Rep, _Period> when, Handle& call_back) {
         call_back.set_state(Handle::STATE::SCHEDULED);
-        scheduled_.emplace_back(std::chrono::duration_cast<duration_ms>(when),
+        scheduled_.emplace_back(std::chrono::duration_cast<duration_type>(when),
                                 HandleInfo{call_back.handle_id(), &call_back});
         std::ranges::push_heap(scheduled_, std::ranges::greater{}, &TimerHandle::first);
     }
@@ -88,7 +88,7 @@ private:
     void run_once();
 
 private:
-    using TimerHandle = std::pair<duration_ms, HandleInfo>;
+    using TimerHandle = std::pair<duration_type, HandleInfo>;
     time_point_type start_time_;
     Selector selector_;
     std::queue<HandleInfo> ready_;

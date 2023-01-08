@@ -13,7 +13,7 @@
 #include <fmt/core.h>
 
 #include <mt/selector/event.h>
-#include <mt/util/macro.h>
+#include <mt/util/macros.h>
 
 namespace mt {
 
@@ -37,6 +37,7 @@ public:
         events.resize(registered_event_count_);
         int ndfs = ::epoll_wait(epfd_, events.data(), registered_event_count_, time_out);
         std::vector<Event> result;
+        // TODO modnarshen ndfs might be `-1`. The comparation between `std::size_t` and `int` contains problem.
         for (std::size_t i = 0; i < ndfs; ++i) {
             result.emplace_back(Event{.handle_info = *reinterpret_cast<HandleInfo*>(events[i].data.ptr)});
         }

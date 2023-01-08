@@ -7,7 +7,7 @@ project(${TARGET_NAME}
         VERSION ${PROJECT_VERSION}
         LANGUAGES CXX)
 
-set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -Wall -Werror")
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 message(CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
 
@@ -16,14 +16,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(MT_INCLUDE
+        include/mt/concept/awaitable.h
+        include/mt/concept/future.h
+        include/mt/concept/promise.h
         include/mt/selector/event.h
         include/mt/selector/selector_epoll.h
         include/mt/selector/selector_kqueue.h
         include/mt/selector/selector.h
-        include/mt/util/macro.h
+        include/mt/util/macros.h
         include/mt/util/noncopyable.h
         include/mt/event_loop.h
+        include/mt/exception.h
         include/mt/handle.h
+        include/mt/result.h
+        include/mt/task.h
         )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
