@@ -1,7 +1,7 @@
 /*
  * @Author: modnarshen
  * @Date: 2023.01.05 15:57:48
- * @Note: Copyrights (c) 2022 modnarshen. All rights reserved.
+ * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #ifndef _MT_SELECTOR_SELECTOR_H
 #define _MT_SELECTOR_SELECTOR_H 1

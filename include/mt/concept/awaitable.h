@@ -1,7 +1,7 @@
 /*
  * @Author: modnarshen
  * @Date: 2023.01.06 11:57:13
- * @Note: Copyrights (c) 2022 modnarshen. All rights reserved.
+ * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #ifndef _MT_CONCEPT_AWAITABLE_H
 #define _MT_CONCEPT_AWAITABLE_H 1
@@ -27,11 +27,11 @@ template <typename _Tp>
 struct Awaitable : std::type_identity<_Tp> { };
 
 template <typename _Tp>
-requires requires(_Tp&& _obj) { std::forward<_Tp>(_obj).operator co_await(); }
+requires requires(_Tp &&_obj) { std::forward<_Tp>(_obj).operator co_await(); }
 struct Awaitable<_Tp> : std::type_identity<decltype(std::declval<_Tp>().operator co_await())> { };
 
 template <typename _Tp>
-requires requires(_Tp&& _obj) {
+requires requires(_Tp &&_obj) {
              operator co_await(std::forward<_Tp>(_obj));
              requires !(requires { std::forward<_Tp>(_obj).operator co_await(); });
          }

@@ -1,7 +1,7 @@
 /*
  * @Author: modnarshen
  * @Date: 2023.01.05 17:58:48
- * @Note: Copyrights (c) 2022 modnarshen. All rights reserved.
+ * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #include <chrono>
 #include <optional>
@@ -19,7 +19,7 @@ void EventLoop::run_until_complete() {
 void EventLoop::clean_delayed_call() {
     // Remove delayed calls that were cancelled from head of queue.
     while (!scheduled_.empty()) {
-        auto&& [when, handle_info] = scheduled_[0];
+        auto &&[when, handle_info] = scheduled_[0];
         if (auto iter = cancelled_.find(handle_info.id); iter != cancelled_.end()) {
             std::ranges::pop_heap(scheduled_, std::ranges::greater{}, &TimerHandle::first);
             scheduled_.pop_back();
@@ -35,17 +35,17 @@ void EventLoop::run_once() {
     if (!ready_.empty()) {
         time_out.emplace(0);
     } else if (!scheduled_.empty()) {
-        auto&& [when, _] = scheduled_[0];
+        auto &&[when, _] = scheduled_[0];
         time_out = std::max(when - time(), duration_type(0));
     }
 
     auto event_lists = selector_.select(time_out.has_value() ? time_out->count() : -1);
-    for (auto&& event : event_lists)
+    for (auto &&event : event_lists)
         ready_.push(event.handle_info);
 
     auto end_time = time();
     while (!scheduled_.empty()) {
-        auto&& [when, handle_info] = scheduled_[0];
+        auto &&[when, handle_info] = scheduled_[0];
         COND_EXP(when >= end_time, break);
         ready_.push(handle_info);
         std::ranges::pop_heap(scheduled_, std::ranges::greater{}, &TimerHandle::first);
@@ -68,7 +68,7 @@ void EventLoop::run_once() {
 
 HandleId Handle::handle_id_generator_ = 0;
 
-const std::source_location& CoroHandle::get_frame_info() const {
+const std::source_location &CoroHandle::get_frame_info() const {
     static const std::source_location frame_info = std::source_location::current();
     return frame_info;
 }
@@ -83,7 +83,7 @@ void CoroHandle::cancel() {
     get_event_loop().cancel_handle(*this);
 }
 
-EventLoop& get_event_loop() {
+EventLoop &get_event_loop() {
     static EventLoop event_loop;
     return event_loop;
 }

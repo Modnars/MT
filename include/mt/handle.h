@@ -1,7 +1,7 @@
 /*
  * @Author: modnarshen
  * @Date: 2023.01.05 11:02:35
- * @Note: Copyrights (c) 2022 modnarshen. All rights reserved.
+ * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #ifndef _MT_HANDLE_H
 #define _MT_HANDLE_H 1
@@ -44,13 +44,13 @@ private:
 // because a destroyed coroutine may has the same address as a new ready coroutine has created.
 struct HandleInfo {
     HandleId id;
-    Handle* handle;
+    Handle *handle;
 };
 
 struct CoroHandle : Handle {
 public:
     std::string frame_name() const {
-        const auto& frame_info = get_frame_info();
+        const auto &frame_info = get_frame_info();
         return fmt::format("{}[line:{}]|{}", frame_info.file_name(), frame_info.line(), frame_info.function_name());
     }
 
@@ -59,7 +59,7 @@ public:
     void cancel();
 
 private:
-    virtual const std::source_location& get_frame_info() const;
+    virtual const std::source_location &get_frame_info() const;
 };
 
 }  // namespace mt

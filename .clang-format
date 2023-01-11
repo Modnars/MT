@@ -1,7 +1,7 @@
 ---
 Language: Cpp
 BasedOnStyle: Google
-PointerAlignment: Left
+PointerAlignment: Right
 DerivePointerAlignment: false
 AccessModifierOffset: -4
 AllowShortFunctionsOnASingleLine: Inline

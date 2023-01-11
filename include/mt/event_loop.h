@@ -1,7 +1,7 @@
 /*
  * @Author: modnarshen
  * @Date: 2023.01.05 15:20:06
- * @Note: Copyrights (c) 2022 modnarshen. All rights reserved.
+ * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #ifndef _MT_EVENT_LOOP_H
 #define _MT_EVENT_LOOP_H 1
@@ -28,7 +28,7 @@ public:
 
     struct WaitEventAwaiter {
     public:
-        WaitEventAwaiter(Selector& selector, Event event) : selector_(selector), event_(event) { }
+        WaitEventAwaiter(Selector &selector, Event event) : selector_(selector), event_(event) { }
         ~WaitEventAwaiter() { selector_.remove_event(event_); }
 
     public:
@@ -44,7 +44,7 @@ public:
         void await_resume() noexcept { }
 
     private:
-        Selector& selector_;
+        Selector &selector_;
         Event event_;
     };
 
@@ -53,22 +53,22 @@ public:
 
     duration_type time() { return std::chrono::duration_cast<duration_type>(clock_type::now() - start_time_); }
 
-    void cancel_handle(Handle& handle) {
+    void cancel_handle(Handle &handle) {
         handle.set_state(Handle::STATE::UNSCHEDULED);
         cancelled_.insert(handle.handle_id());
     }
 
-    void call_soon(Handle& handle) {
+    void call_soon(Handle &handle) {
         handle.set_state(Handle::STATE::SCHEDULED);
         ready_.push({handle.handle_id(), &handle});
     }
 
     template <typename _Rep, typename _Period>
-    void call_later(std::chrono::duration<_Rep, _Period> delay, Handle& call_back) {
+    void call_later(std::chrono::duration<_Rep, _Period> delay, Handle &call_back) {
         call_at(time() + std::chrono::duration_cast<duration_type>(delay), call_back);
     }
 
-    [[nodiscard]] auto wait_event(const Event& event) { return WaitEventAwaiter{selector_, event}; }
+    [[nodiscard]] auto wait_event(const Event &event) { return WaitEventAwaiter{selector_, event}; }
 
     void run_until_complete();
 
@@ -78,7 +78,7 @@ private:
     void clean_delayed_call();
 
     template <typename _Rep, typename _Period>
-    void call_at(std::chrono::duration<_Rep, _Period> when, Handle& call_back) {
+    void call_at(std::chrono::duration<_Rep, _Period> when, Handle &call_back) {
         call_back.set_state(Handle::STATE::SCHEDULED);
         scheduled_.emplace_back(std::chrono::duration_cast<duration_type>(when),
                                 HandleInfo{call_back.handle_id(), &call_back});
@@ -96,7 +96,7 @@ private:
     std::unordered_set<HandleId> cancelled_;
 };  // namespace mt
 
-EventLoop& get_event_loop();
+EventLoop &get_event_loop();
 
 }  // namespace mt
 

@@ -1,7 +1,7 @@
 /*
  * @Author: modnarshen
  * @Date: 2023.01.06 15:05:39
- * @Note: Copyrights (c) 2022 modnarshen. All rights reserved.
+ * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #ifndef _MT_TASK_H
 #define _MT_TASK_H 1
@@ -70,9 +70,9 @@ public:
         promise_type() = default;
 
         template <typename... _Args>  // from free function
-        promise_type(NoWaitAtInitialSuspend, _Args&&...) : wait_at_initial_suspend_{false} { }
+        promise_type(NoWaitAtInitialSuspend, _Args &&...) : wait_at_initial_suspend_{false} { }
         template <typename _Obj, typename... _Args>  // from member function
-        promise_type(_Obj&&, NoWaitAtInitialSuspend, _Args&&...) : wait_at_initial_suspend_{false} { }
+        promise_type(_Obj &&, NoWaitAtInitialSuspend, _Args &&...) : wait_at_initial_suspend_{false} { }
 
         auto initial_suspend() noexcept { return InitialSuspendAwaiter{wait_at_initial_suspend_}; }
 
@@ -81,13 +81,13 @@ public:
         Task get_return_object() noexcept { return Task{coro_handle::from_promise(*this)}; }
 
         template <concepts::Awaiter _Awaiter>
-        decltype(auto) await_transform(_Awaiter&& awaiter, std::source_location loc = std::source_location::current()) {
+        decltype(auto) await_transform(_Awaiter &&awaiter, std::source_location loc = std::source_location::current()) {
             frame_info_ = loc;  // save soure_location info
             return std::forward<_Awaiter>(awaiter);
         }
 
         void run() final { coro_handle::from_promise(*this).resume(); }
-        const std::source_location& get_frame_info() const final override { return frame_info_; }
+        const std::source_location &get_frame_info() const final override { return frame_info_; }
         void dump_backtrace(std::size_t depth = 0) const final override {
             fmt::print("[{}] {}\n", depth, frame_name());
             if (continuation_) {
@@ -99,20 +99,20 @@ public:
 
     public:
         const bool wait_at_initial_suspend_{true};
-        CoroHandle* continuation_{};
+        CoroHandle *continuation_{};
         std::source_location frame_info_{};
     };
 
 public:
     explicit Task(coro_handle h) noexcept : handle_(h) { }
-    Task(Task&& t) noexcept : handle_(std::exchange(t.handle_, {})) { }
+    Task(Task &&t) noexcept : handle_(std::exchange(t.handle_, {})) { }
     ~Task() { destroy(); }
 
     decltype(auto) result() & { return handle_.promise().result(); }
 
     decltype(auto) result() && { return std::move(handle_.promise()).result(); }
 
-    auto operator co_await() const& noexcept {
+    auto operator co_await() const &noexcept {
         struct AwaiterImpl : AwaiterBase {
             decltype(auto) await_resume() const {
                 if (!AwaiterBase::self_coro_) [[unlikely]] {
@@ -124,7 +124,7 @@ public:
         return AwaiterImpl{handle_};
     }
 
-    auto operator co_await() const&& noexcept {
+    auto operator co_await() const &&noexcept {
         struct AwaiterImpl : AwaiterBase {
             decltype(auto) await_resume() const {
                 if (!AwaiterBase::self_coro_) [[unlikely]] {

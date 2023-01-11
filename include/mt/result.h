@@ -1,7 +1,7 @@
 /*
  * @Author: modnarshen
  * @Date: 2023.01.06 15:09:01
- * @Note: Copyrights (c) 2022 modnarshen. All rights reserved.
+ * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #ifndef _MT_RESULT_H
 #define _MT_RESULT_H 1
@@ -19,30 +19,30 @@ public:
     constexpr bool has_value() const noexcept { return std::get_if<std::monostate>(&result_) == nullptr; }
 
     template <typename _Value>
-    constexpr void set_value(_Value&& value) noexcept {
+    constexpr void set_value(_Value &&value) noexcept {
         // TODO modnarshen 学习一下这种写法
         result_.template emplace<_Tp>(std::forward<_Value>(value));
     }
 
     template <typename _Value>
-    constexpr void return_value(_Value&& value) noexcept {
+    constexpr void return_value(_Value &&value) noexcept {
         return set_value(std::forward<_Value>(value));
     }
 
     constexpr _Tp result() & {
-        if (auto* exception = std::get_if<std::exception_ptr>(&result_)) {
+        if (auto *exception = std::get_if<std::exception_ptr>(&result_)) {
             std::rethrow_exception(*exception);
         }
-        if (auto* res = std::get_if<_Tp>(&result_)) {
+        if (auto *res = std::get_if<_Tp>(&result_)) {
             return *res;
         }
         throw ExceptionNoResult{};
     }
     constexpr _Tp result() && {
-        if (auto* exception = std::get_if<std::exception_ptr>(&result_)) {
+        if (auto *exception = std::get_if<std::exception_ptr>(&result_)) {
             std::rethrow_exception(*exception);
         }
-        if (auto* res = std::get_if<_Tp>(&result_)) {
+        if (auto *res = std::get_if<_Tp>(&result_)) {
             return std::move(*res);
         }
         throw ExceptionNoResult{};

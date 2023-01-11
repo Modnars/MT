@@ -22,7 +22,7 @@
 template <typename...>
 struct dump;
 template <std::size_t N>
-mt::Task<> coro_depth_n(std::vector<int>& result) {
+mt::Task<> coro_depth_n(std::vector<int> &result) {
     result.push_back(N);
     if constexpr (N > 0) {
         co_await coro_depth_n<N - 1>(result);
@@ -64,7 +64,7 @@ SCENARIO("test Task await") {
 }
 
 mt::Task<std::int64_t> square(std::int64_t x) {
-    co_return x* x;  // Why clang-format formatted the code as `x* x` rather than `x * x` ?
+    co_return x *x;  // Why clang-format formatted the code as `x* x` rather than `x * x` ?
 }
 
 SCENARIO("Task<> test") {

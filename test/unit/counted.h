@@ -31,19 +31,29 @@ struct Counted {
 
     Counted() : id(default_construct_counts++) { }
 
-    Counted(const Counted& other) requires(_policy.copy_constructable) : id(other.id) { ++copy_construct_counts; }
+    Counted(const Counted &other)
+    requires(_policy.copy_constructable)
+        : id(other.id) {
+        ++copy_construct_counts;
+    }
 
-    Counted(Counted&& other) requires(_policy.move_constructable) : id(other.id) {
+    Counted(Counted &&other)
+    requires(_policy.move_constructable)
+        : id(other.id) {
         ++move_construct_counts;
         other.id = -1;
     }
 
-    Counted& operator=(const Counted&) requires(_policy.copy_assignable) {
+    Counted &operator=(const Counted &)
+    requires(_policy.copy_assignable)
+    {
         ++copy_assign_counts;
         return *this;
     }
 
-    Counted& operator=(Counted&& other) requires(_policy.move_assignable) {
+    Counted &operator=(Counted &&other)
+    requires(_policy.move_assignable)
+    {
         ++move_assign_counts;
         other.id = -1;
         return *this;

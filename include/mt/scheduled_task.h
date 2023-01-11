@@ -14,7 +14,7 @@ namespace mt {
 template <concepts::SchedulableTask _Task>
 struct ScheduledTask : private NonCopyable {
     template <concepts::SchedulableTask _SchedulableTask>
-    explicit ScheduledTask(_SchedulableTask&& _task) : task_(std::forward<_SchedulableTask>(_task)) {
+    explicit ScheduledTask(_SchedulableTask &&_task) : task_(std::forward<_SchedulableTask>(_task)) {
         if (task_.valid() && !task_.done()) {
             task_.schedule();
         }
@@ -22,8 +22,8 @@ struct ScheduledTask : private NonCopyable {
 
     void cancel() { task_.cancel(); }
 
-    decltype(auto) operator co_await() const& noexcept { return task_.operator co_await(); }
-    auto operator co_await() const&& noexcept { return task_.operator co_await(); }
+    decltype(auto) operator co_await() const &noexcept { return task_.operator co_await(); }
+    auto operator co_await() const &&noexcept { return task_.operator co_await(); }
 
     decltype(auto) result() & { return task_.result(); }
     decltype(auto) result() && { return std::move(task_).result(); }
@@ -36,10 +36,10 @@ private:
 };
 
 template <concepts::SchedulableTask _Task>
-ScheduledTask(_Task&&) -> ScheduledTask<_Task>;
+ScheduledTask(_Task &&) -> ScheduledTask<_Task>;
 
 template <concepts::SchedulableTask _Task>
-[[nodiscard("discard a task will not schedule to run")]] ScheduledTask<_Task> scheduled_task(_Task&& _task) {
+[[nodiscard("discard a task will not schedule to run")]] ScheduledTask<_Task> scheduled_task(_Task &&_task) {
     return ScheduledTask{std::forward<_Task>(_task)};
 }
 

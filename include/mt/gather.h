@@ -27,10 +27,10 @@ public:
     constexpr bool await_ready() noexcept { return is_finished(); }
 
     constexpr auto await_resume() const {
-        if (auto* exception = std::get_if<std::exception_ptr>(&result_)) {
+        if (auto *exception = std::get_if<std::exception_ptr>(&result_)) {
             std::rethrow_exception(*exception);
         }
-        if (auto* res = std::get_if<result_types>(&result_)) {
+        if (auto *res = std::get_if<result_types>(&result_)) {
             return *res;
         }
         throw std::runtime_error("result is unset");
@@ -44,19 +44,19 @@ public:
     }
 
     template <concepts::Awaiter... _Futures>
-    explicit GatherAwaiter(_Futures&&... futures)
+    explicit GatherAwaiter(_Futures &&...futures)
         : GatherAwaiter(std::make_index_sequence<sizeof...(_Futures)>{}, std::forward<_Futures>(futures)...) { }
 
 private:
     template <concepts::Awaiter... _Futures, std::size_t... _idxSeq>
-    explicit GatherAwaiter(std::index_sequence<_idxSeq...>, _Futures&&... futures) : tasks_ {
+    explicit GatherAwaiter(std::index_sequence<_idxSeq...>, _Futures &&...futures) : tasks_ {
         std::make_tuple(collect_result<_idxSeq>(no_wait_at_initial_suspend, std::forward<_Futures>(futures))...)
     }
 
     template <std::size_t _idx, concepts::Awaiter _Future>
-    Task<> collect_result(NoWaitAtInitialSuspend, _Future&& future) {
+    Task<> collect_result(NoWaitAtInitialSuspend, _Future &&future) {
         try {
-            auto& results = std::get<result_types>(result_);
+            auto &results = std::get<result_types>(result_);
             if constexpr (std::is_void_v<AwaitResult<_Future>>) {
                 co_await std::forward<_Future>(future);
             } else {
@@ -79,20 +79,20 @@ private:
 private:
     std::variant<result_types, std::exception_ptr> result_;
     std::tuple<Task<std::void_t<_Results>>...> tasks_;
-    CoroHandle* continuation_{};
+    CoroHandle *continuation_{};
     int count_{0};
 };
 
 template <concepts::Awaiter... _Futures>
-GatherAwaiter(_Futures&&...) -> GatherAwaiter<AwaitResult<_Futures>...>;
+GatherAwaiter(_Futures &&...) -> GatherAwaiter<AwaitResult<_Futures>...>;
 
 template <concepts::Awaiter... _Futures>
 struct GatherAwaiterRepository {
-    explicit GatherAwaiterRepository(_Futures&&... futures) : futures_(std::forward<_Futures>(futures)...) { }
+    explicit GatherAwaiterRepository(_Futures &&...futures) : futures_(std::forward<_Futures>(futures)...) { }
 
     auto operator co_await() && {
         return std::apply(
-            []<concepts::Awaiter... _Futures>(_Futures && ... _futures) {
+            []<concepts::Awaiter... _Futures>(_Futures && ..._futures) {
                 return GatherAwaiter{std::forward<_Futures>(_futures)...};
             },
             std::move(futures_));
@@ -107,10 +107,10 @@ private:
 };
 
 template <concepts::Awaiter... _Futures>  // need deduction guide to deduce future type
-GatherAwaiterRepository(_Futures&&...)->GatherAwaiterRepository<_Futures...>;
+GatherAwaiterRepository(_Futures &&...)->GatherAwaiterRepository<_Futures...>;
 
 template <concepts::Awaiter... _Futures>
-auto gather(NoWaitAtInitialSuspend, _Futures&&... futures)
+auto gather(NoWaitAtInitialSuspend, _Futures &&...futures)
     -> Task<std::tuple<GetTypeIfVoid_t<AwaitResult<_Futures>>...>> {
     co_return co_await GatherAwaiterRepository{std::forward<_Futures>(futures)...};
 }
@@ -118,7 +118,7 @@ auto gather(NoWaitAtInitialSuspend, _Futures&&... futures)
 }  // namespace detail
 
 template <concepts::Awaiter... _Futures>
-[[nodiscard("discard gather doesn't make sense")]] auto gather(_Futures&&... futures) {
+[[nodiscard("discard gather doesn't make sense")]] auto gather(_Futures &&...futures) {
     return detail::gather(no_wait_at_initial_suspend, std::forward<_Futures>(futures)...);
 }
 
