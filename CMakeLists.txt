@@ -19,17 +19,21 @@ set(MT_INCLUDE
         include/mt/concept/awaitable.h
         include/mt/concept/future.h
         include/mt/concept/promise.h
+        include/mt/concept/schedulable.h
         include/mt/selector/event.h
         include/mt/selector/selector_epoll.h
         include/mt/selector/selector_kqueue.h
         include/mt/selector/selector.h
         include/mt/util/macros.h
         include/mt/util/noncopyable.h
+        include/mt/call_stack.h
         include/mt/event_loop.h
         include/mt/exception.h
+        include/mt/gather.h
         include/mt/handle.h
         include/mt/result.h
         include/mt/task.h
+        include/mt/void_value.h
         )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
