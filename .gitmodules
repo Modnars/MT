@@ -4,3 +4,6 @@
 [submodule "3rd/Catch2"]
 	path = 3rd/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "3rd/nanobench"]
+	path = 3rd/nanobench
+	url = https://github.com/martinus/nanobench.git
