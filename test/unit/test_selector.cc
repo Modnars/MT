@@ -9,7 +9,7 @@
 #include <mt/selector/selector.h>
 
 SCENARIO("test selector wait") {
-    using namespace std::chrono;
+    using namespace std::chrono_literals;
 
     mt::EventLoop loop;
     mt::Selector selector;

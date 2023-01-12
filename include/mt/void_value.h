@@ -15,7 +15,7 @@ struct VoidValue { };
 namespace detail {
 
 template <typename _Tp>
-struct GetTypeIfVoid : std::type_identity<T> { };
+struct GetTypeIfVoid : std::type_identity<_Tp> { };
 
 template <>
 struct GetTypeIfVoid<void> : std::type_identity<VoidValue> { };

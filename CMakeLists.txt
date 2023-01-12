@@ -20,6 +20,10 @@ set(MT_INCLUDE
         include/mt/concept/future.h
         include/mt/concept/promise.h
         include/mt/concept/schedulable.h
+        include/mt/net/addrinfo_guard.h
+        include/mt/net/connect.h
+        include/mt/net/server.h
+        include/mt/net/stream.h
         include/mt/selector/event.h
         include/mt/selector/selector_epoll.h
         include/mt/selector/selector_kqueue.h
@@ -32,8 +36,10 @@ set(MT_INCLUDE
         include/mt/gather.h
         include/mt/handle.h
         include/mt/result.h
+        include/mt/sleep.h
         include/mt/task.h
         include/mt/void_value.h
+        include/mt/wait_for.h
         )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)

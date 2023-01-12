@@ -8,16 +8,16 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-// #include <mt/callstack.h>
+#include <mt/call_stack.h>
 #include <mt/exception.h>
-// #include <mt/gather.h>
-// #include <mt/open_connection.h>
+#include <mt/gather.h>
+#include <mt/net/connect.h>
+#include <mt/net/server.h>
 #include <mt/runner.h>
 #include <mt/scheduled_task.h>
-// #include <mt/sleep.h>
-// #include <mt/start_server.h>
+#include <mt/sleep.h>
 #include <mt/task.h>
-// #include <mt/wait_for.h>
+#include <mt/wait_for.h>
 
 template <typename...>
 struct dump;
@@ -64,7 +64,7 @@ SCENARIO("test Task await") {
 }
 
 mt::Task<std::int64_t> square(std::int64_t x) {
-    co_return x *x;  // Why clang-format formatted the code as `x* x` rather than `x * x` ?
+    co_return x *x;
 }
 
 SCENARIO("Task<> test") {
@@ -170,253 +170,254 @@ SCENARIO("test exception") {
     REQUIRE_THROWS_AS(mt::run(int_div(4, 0)), std::overflow_error);
 }
 
-// SCENARIO("test gather") {
-//     bool is_called = false;
-//     auto factorial = [&](std::string_view name, int number) -> mt::Task<int> {
-//         int r = 1;
-//         for (int i = 2; i <= number; ++i) {
-//             fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
-//             co_await mt::sleep(0.1s);
-//             r *= i;
-//         }
-//         fmt::print("Task {}: factorial({}) = {}\n", name, number, r);
-//         co_return r;
-//     };
-//     auto test_void_func = []() -> mt::Task<> {
-//         fmt::print("this is a void value\n");
-//         co_return;
-//     };
+SCENARIO("test gather") {
+    bool is_called = false;
+    auto factorial = [&](std::string_view name, int number) -> mt::Task<int> {
+        int r = 1;
+        for (int i = 2; i <= number; ++i) {
+            fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
+            co_await mt::sleep(0.1s);
+            r *= i;
+        }
+        fmt::print("Task {}: factorial({}) = {}\n", name, number, r);
+        co_return r;
+    };
+    auto test_void_func = []() -> mt::Task<> {
+        fmt::print("this is a void value\n");
+        co_return;
+    };
 
-//     SECTION("test lvalue & rvalue gather") {
-//         REQUIRE(!is_called);
-//         mt::run([&]() -> mt::Task<> {
-//             auto fac_lvalue = factorial("A", 2);
-//             auto fac_xvalue = factorial("B", 3);
-//             auto&& fac_rvalue = factorial("C", 4);
-//             {
-//                 auto&& [a, b, c, _void] = co_await mt::gather(fac_lvalue, static_cast<mt::Task<int>&&>(fac_xvalue),
-//                                                               std::move(fac_rvalue), test_void_func());
-//                 REQUIRE(a == 2);
-//                 REQUIRE(b == 6);
-//                 REQUIRE(c == 24);
-//             }
-//             REQUIRE((co_await fac_lvalue) == 2);
-//             REQUIRE(!fac_xvalue.valid());  // be moved
-//             REQUIRE(!fac_rvalue.valid());  // be moved
-//             is_called = true;
-//         }());
-//         REQUIRE(is_called);
-//     }
+    SECTION("test lvalue & rvalue gather") {
+        REQUIRE(!is_called);
+        mt::run([&]() -> mt::Task<> {
+            auto fac_lvalue = factorial("A", 2);
+            auto fac_xvalue = factorial("B", 3);
+            auto &&fac_rvalue = factorial("C", 4);
+            {
+                auto &&[a, b, c, _void] = co_await mt::gather(fac_lvalue, static_cast<mt::Task<int> &&>(fac_xvalue),
+                                                              std::move(fac_rvalue), test_void_func());
+                REQUIRE(a == 2);
+                REQUIRE(b == 6);
+                REQUIRE(c == 24);
+            }
+            REQUIRE((co_await fac_lvalue) == 2);
+            REQUIRE(!fac_xvalue.valid());  // be moved
+            REQUIRE(!fac_rvalue.valid());  // be moved
+            is_called = true;
+        }());
+        REQUIRE(is_called);
+    }
 
-//     SECTION("test gather of gather") {
-//         REQUIRE(!is_called);
-//         mt::run([&]() -> mt::Task<> {
-//             auto&& [ab, c, _void] =
-//                 co_await mt::gather(gather(factorial("A", 2), factorial("B", 3)), factorial("C", 4),
-//                 test_void_func());
-//             auto&& [a, b] = ab;
-//             REQUIRE(a == 2);
-//             REQUIRE(b == 6);
-//             REQUIRE(c == 24);
-//             is_called = true;
-//         }());
-//         REQUIRE(is_called);
-//     }
+    SECTION("test gather of gather") {
+        REQUIRE(!is_called);
+        mt::run([&]() -> mt::Task<> {
+            auto &&[ab, c, _void] = co_await mt::gather(mt::gather(factorial("A", 2), factorial("B", 3)),
+                                                        factorial("C", 4), test_void_func());
+            auto &&[a, b] = ab;
+            REQUIRE(a == 2);
+            REQUIRE(b == 6);
+            REQUIRE(c == 24);
+            is_called = true;
+        }());
+        REQUIRE(is_called);
+    }
 
-//     SECTION("test detach gather") {
-//         REQUIRE(!is_called);
-//         auto res = mt::gather(factorial("A", 2), factorial("B", 3));
-//         mt::run([&]() -> mt::Task<> {
-//             auto&& [a, b] = co_await std::move(res);
-//             REQUIRE(a == 2);
-//             REQUIRE(b == 6);
-//             is_called = true;
-//         }());
-//         REQUIRE(is_called);
-//     }
+    SECTION("test detach gather") {
+        REQUIRE(!is_called);
+        auto res = mt::gather(factorial("A", 2), factorial("B", 3));
+        mt::run([&]() -> mt::Task<> {
+            auto &&[a, b] = co_await std::move(res);
+            REQUIRE(a == 2);
+            REQUIRE(b == 6);
+            is_called = true;
+        }());
+        REQUIRE(is_called);
+    }
 
-//     SECTION("test exception gather") {
-//         REQUIRE(!is_called);
-//         REQUIRE_THROWS_AS(mt::run([&]() -> mt::Task<std::tuple<double, int>> {
-//                               is_called = true;
-//                               co_return co_await mt::gather(int_div(4, 0), factorial("B", 3));
-//                           }()),
-//                           std::overflow_error);
-//         REQUIRE(is_called);
-//     }
-// }
+    SECTION("test exception gather") {
+        REQUIRE(!is_called);
+        REQUIRE_THROWS_AS(mt::run([&]() -> mt::Task<std::tuple<double, int>> {
+                              is_called = true;
+                              co_return co_await mt::gather(int_div(4, 0), factorial("B", 3));
+                          }()),
+                          std::overflow_error);
+        REQUIRE(is_called);
+    }
+}
 
-// SCENARIO("test sleep") {
-//     std::size_t call_time = 0;
-//     auto say_after = [&](auto delay, std::string_view what) -> mt::Task<> {
-//         co_await mt::sleep(delay);
-//         fmt::print("{}\n", what);
-//         ++call_time;
-//     };
+SCENARIO("test sleep") {
+    std::size_t call_time = 0;
+    auto say_after = [&](auto delay, std::string_view what) -> mt::Task<> {
+        co_await mt::sleep(delay);
+        fmt::print("{}\n", what);
+        ++call_time;
+    };
 
-//     GIVEN("schedule sleep and await") {
-//         auto async_main = [&]() -> mt::Task<> {
-//             auto task1 = scheduled_task(say_after(100ms, "hello"));
-//             auto task2 = scheduled_task(say_after(200ms, "world"));
+    GIVEN("schedule sleep and await") {
+        auto async_main = [&]() -> mt::Task<> {
+            auto task1 = mt::scheduled_task(say_after(100ms, "hello"));
+            auto task2 = mt::scheduled_task(say_after(200ms, "world"));
 
-//             co_await task1;
-//             co_await task2;
-//         };
-//         auto before_wait = get_event_loop().time();
-//         mt::run(async_main());
-//         auto after_wait = get_event_loop().time();
-//         auto diff = after_wait - before_wait;
-//         REQUIRE(diff >= 200ms);
-//         REQUIRE(diff < 300ms);
-//         REQUIRE(call_time == 2);
-//     }
+            co_await task1;
+            co_await task2;
+        };
+        auto before_wait = mt::get_event_loop().time();
+        mt::run(async_main());
+        auto after_wait = mt::get_event_loop().time();
+        auto diff = after_wait - before_wait;
+        REQUIRE(diff >= 200ms);
+        REQUIRE(diff < 300ms);
+        REQUIRE(call_time == 2);
+    }
 
-//     GIVEN("schedule sleep and cancel") {
-//         auto async_main = [&]() -> mt::Task<> {
-//             auto task1 = scheduled_task(say_after(100ms, "hello"));
-//             auto task2 = scheduled_task(say_after(200ms, "world"));
+    GIVEN("schedule sleep and cancel") {
+        auto async_main = [&]() -> mt::Task<> {
+            auto task1 = mt::scheduled_task(say_after(100ms, "hello"));
+            auto task2 = mt::scheduled_task(say_after(200ms, "world"));
 
-//             co_await task1;
-//             task2.cancel();
-//         };
-//         auto before_wait = get_event_loop().time();
-//         mt::run(async_main());
-//         auto after_wait = get_event_loop().time();
-//         auto diff = after_wait - before_wait;
-//         REQUIRE(diff >= 100ms);
-//         REQUIRE(diff < 200ms);
-//         REQUIRE(call_time == 1);
-//     }
+            co_await task1;
+            task2.cancel();
+        };
+        auto before_wait = mt::get_event_loop().time();
+        mt::run(async_main());
+        auto after_wait = mt::get_event_loop().time();
+        auto diff = after_wait - before_wait;
+        REQUIRE(diff >= 100ms);
+        REQUIRE(diff < 200ms);
+        REQUIRE(call_time == 1);
+    }
 
-//     GIVEN("schedule sleep and cancel, delay exit") {
-//         auto async_main = [&]() -> mt::Task<> {
-//             auto task1 = scheduled_task(say_after(100ms, "hello"));
-//             auto task2 = scheduled_task(say_after(200ms, "world"));
+    GIVEN("schedule sleep and cancel, delay exit") {
+        auto async_main = [&]() -> mt::Task<> {
+            auto task1 = mt::scheduled_task(say_after(100ms, "hello"));
+            auto task2 = mt::scheduled_task(say_after(200ms, "world"));
 
-//             co_await task1;
-//             task2.cancel();
-//             // delay 300ms to exit
-//             co_await mt::sleep(200ms);
-//         };
-//         auto before_wait = get_event_loop().time();
-//         mt::run(async_main());
-//         auto after_wait = get_event_loop().time();
-//         auto diff = after_wait - before_wait;
-//         REQUIRE(diff >= 300ms);
-//         REQUIRE(diff < 400ms);
-//         REQUIRE(call_time == 1);
-//     }
-// }
+            co_await task1;
+            task2.cancel();
+            // delay 300ms to exit
+            co_await mt::sleep(200ms);
+        };
+        auto before_wait = mt::get_event_loop().time();
+        mt::run(async_main());
+        auto after_wait = mt::get_event_loop().time();
+        auto diff = after_wait - before_wait;
+        REQUIRE(diff >= 300ms);
+        REQUIRE(diff < 400ms);
+        REQUIRE(call_time == 1);
+    }
+}
 
-// SCENARIO("cancel a infinite loop coroutine") {
-//     int count = 0;
-//     mt::run([&]() -> mt::Task<> {
-//         auto inf_loop = [&]() -> mt::Task<> {
-//             while (true) {
-//                 ++count;
-//                 co_await mt::sleep(1ms);
-//             }
-//         };
-//         auto mt::task = scheduled_task(inf_loop());
-//         co_await mt::sleep(10ms);
-//         mt::task.cancel();
-//     }());
-//     REQUIRE(count > 0);
-//     REQUIRE(count < 10);
-// }
+SCENARIO("cancel a infinite loop coroutine") {
+    int count = 0;
+    mt::run([&]() -> mt::Task<> {
+        auto inf_loop = [&]() -> mt::Task<> {
+            while (true) {
+                ++count;
+                co_await mt::sleep(1ms);
+            }
+        };
+        auto task = mt::scheduled_task(inf_loop());
+        co_await mt::sleep(10ms);
+        task.cancel();
+    }());
+    REQUIRE(count > 0);
+    REQUIRE(count < 10);
+}
 
-// SCENARIO("test timeout") {
-//     bool is_called = false;
-//     auto wait_duration = [&](auto duration) -> mt::Task<int> {
-//         co_await sleep(duration);
-//         fmt::print("wait_duration finished\n");
-//         is_called = true;
-//         co_return 0xbabababc;
-//     };
+SCENARIO("test timeout") {
+    bool is_called = false;
+    auto wait_duration = [&](auto duration) -> mt::Task<int> {
+        co_await mt::sleep(duration);
+        fmt::print("wait_duration finished\n");
+        is_called = true;
+        co_return 0xbabababc;
+    };
 
-//     auto wait_for_test = [&](auto duration, auto timeout) -> mt::Task<int> {
-//         co_return co_await wait_for(wait_duration(duration), timeout);
-//     };
+    auto wait_for_test = [&](auto duration, auto timeout) -> mt::Task<int> {
+        co_return co_await mt::wait_for(wait_duration(duration), timeout);
+    };
 
-//     SECTION("no timeout") {
-//         REQUIRE(!is_called);
-//         REQUIRE(mt::run(wait_for_test(12ms, 120ms)) == 0xbabababc);
-//         REQUIRE(is_called);
-//     }
+    SECTION("no timeout") {
+        REQUIRE(!is_called);
+        REQUIRE(mt::run(wait_for_test(12ms, 120ms)) == 0xbabababc);
+        REQUIRE(is_called);
+    }
 
-//     SECTION("wait_for with sleep") {
-//         REQUIRE(!is_called);
-//         auto wait_for_rvalue = wait_for(sleep(30ms), 50ms);
-//         mt::run([&]() -> mt::Task<> {
-//             REQUIRE_NOTHROW(co_await std::move(wait_for_rvalue));
-//             REQUIRE_THROWS_AS(co_await wait_for(sleep(50ms), 30ms), TimeoutError);
-//             is_called = true;
-//         }());
-//         REQUIRE(is_called);
-//     }
+    SECTION("wait_for with sleep") {
+        REQUIRE(!is_called);
+        auto wait_for_rvalue = mt::wait_for(mt::sleep(30ms), 50ms);
+        mt::run([&]() -> mt::Task<> {
+            REQUIRE_NOTHROW(co_await std::move(wait_for_rvalue));
+            REQUIRE_THROWS_AS(co_await mt::wait_for(mt::sleep(50ms), 30ms), mt::ExceptionTimeOut);
+            is_called = true;
+        }());
+        REQUIRE(is_called);
+    }
 
-//     SECTION("wait_for with gather") {
-//         REQUIRE(!is_called);
-//         mt::run([&]() -> mt::Task<> {
-//             REQUIRE_NOTHROW(co_await wait_for(gather(sleep(10ms), sleep(20ms), sleep(30ms)), 50ms));
-//             REQUIRE_THROWS_AS(co_await wait_for(gather(sleep(10ms), sleep(80ms), sleep(30ms)), 50ms), TimeoutError);
-//             is_called = true;
-//         }());
-//         REQUIRE(is_called);
-//     }
+    SECTION("wait_for with gather") {
+        REQUIRE(!is_called);
+        mt::run([&]() -> mt::Task<> {
+            REQUIRE_NOTHROW(co_await mt::wait_for(mt::gather(mt::sleep(10ms), mt::sleep(20ms), mt::sleep(30ms)), 50ms));
+            REQUIRE_THROWS_AS(
+                co_await mt::wait_for(mt::gather(mt::sleep(10ms), mt::sleep(80ms), mt::sleep(30ms)), 50ms),
+                mt::ExceptionTimeOut);
+            is_called = true;
+        }());
+        REQUIRE(is_called);
+    }
 
-//     SECTION("notime out with exception") {
-//         REQUIRE_THROWS_AS(mt::run([]() -> mt::Task<> { auto v = co_await wait_for(int_div(5, 0), 100ms); }()),
-//                           std::overflow_error);
-//     }
+    SECTION("notime out with exception") {
+        REQUIRE_THROWS_AS(mt::run([]() -> mt::Task<> { auto v = co_await mt::wait_for(int_div(5, 0), 100ms); }()),
+                          std::overflow_error);
+    }
 
-//     SECTION("timeout error") {
-//         REQUIRE(!is_called);
-//         REQUIRE_THROWS_AS(mt::run(wait_for_test(200ms, 100ms)), TimeoutError);
-//         REQUIRE(!is_called);
-//     }
+    SECTION("timeout error") {
+        REQUIRE(!is_called);
+        REQUIRE_THROWS_AS(mt::run(wait_for_test(200ms, 100ms)), mt::ExceptionTimeOut);
+        REQUIRE(!is_called);
+    }
 
-//     SECTION("wait for awaitable") {
-//         mt::run([]() -> mt::Task<> {
-//             co_await wait_for(std::suspend_always{}, 1s);
-//             co_await wait_for(std::suspend_never{}, 1s);
-//         }());
-//     }
-// }
+    SECTION("wait for awaitable") {
+        mt::run([]() -> mt::Task<> {
+            co_await mt::wait_for(std::suspend_always{}, 1s);
+            co_await mt::wait_for(std::suspend_never{}, 1s);
+        }());
+    }
+}
 
-// SCENARIO("echo server & client") {
-//     bool is_called = false;
-//     constexpr std::string_view message = "hello world!";
+SCENARIO("echo server & client") {
+    bool is_called = false;
+    constexpr std::string_view message = "hello world!";
 
-//     mt::run([&]() -> mt::Task<> {
-//         auto handle_echo = [&](Stream stream) -> mt::Task<> {
-//             auto& sockinfo = stream.get_sock_info();
-//             auto data = co_await stream.read(100);
-//             REQUIRE(std::string_view{data.data()} == message);
-//             co_await stream.write(data);
-//         };
+    mt::run([&]() -> mt::Task<> {
+        auto handle_echo = [&](mt::Stream stream) -> mt::Task<> {
+            auto &sockinfo = stream.get_sock_info();
+            auto data = co_await stream.read(100);
+            REQUIRE(std::string_view{data.data()} == message);
+            co_await stream.write(data);
+        };
 
-//         auto echo_server = [&]() -> mt::Task<> {
-//             auto server = co_await mt::start_server(handle_echo, "127.0.0.1", 8888);
-//             co_await server.serve_forever();
-//         };
+        auto echo_server = [&]() -> mt::Task<> {
+            auto server = co_await mt::start_server(handle_echo, "127.0.0.1", 8888);
+            co_await server.serve();
+        };
 
-//         auto echo_client = [&]() -> mt::Task<> {
-//             auto stream = co_await mt::open_connection("127.0.0.1", 8888);
+        auto echo_client = [&]() -> mt::Task<> {
+            auto stream = co_await mt::connect("127.0.0.1", 8888);
 
-//             co_await stream.write(Stream::Buffer(message.begin(), message.end()));
+            co_await stream.write(mt::Stream::buffer_type(message.begin(), message.end()));
 
-//             auto data = co_await stream.read(100);
-//             REQUIRE(std::string_view{data.data()} == message);
-//             is_called = true;
-//         };
+            auto data = co_await stream.read(100);
+            REQUIRE(std::string_view{data.data()} == message);
+            is_called = true;
+        };
 
-//         auto srv = mt::scheduled_task(echo_server());
-//         co_await echo_client();
-//         srv.cancel();
-//     }());
+        auto srv = mt::scheduled_task(echo_server());
+        co_await echo_client();
+        srv.cancel();
+    }());
 
-//     REQUIRE(is_called);
-// }
+    REQUIRE(is_called);
+}
 
 SCENARIO("test") { }

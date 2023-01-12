@@ -49,9 +49,9 @@ public:
 
 private:
     template <concepts::Awaiter... _Futures, std::size_t... _idxSeq>
-    explicit GatherAwaiter(std::index_sequence<_idxSeq...>, _Futures &&...futures) : tasks_ {
-        std::make_tuple(collect_result<_idxSeq>(no_wait_at_initial_suspend, std::forward<_Futures>(futures))...)
-    }
+    explicit GatherAwaiter(std::index_sequence<_idxSeq...>, _Futures &&...futures)
+        : tasks_{std::make_tuple(
+              collect_result<_idxSeq>(no_wait_at_initial_suspend, std::forward<_Futures>(futures))...)} { }
 
     template <std::size_t _idx, concepts::Awaiter _Future>
     Task<> collect_result(NoWaitAtInitialSuspend, _Future &&future) {
@@ -92,8 +92,8 @@ struct GatherAwaiterRepository {
 
     auto operator co_await() && {
         return std::apply(
-            []<concepts::Awaiter... _Futures>(_Futures && ..._futures) {
-                return GatherAwaiter{std::forward<_Futures>(_futures)...};
+            []<concepts::Awaiter... _Futs>(_Futs && ..._futures) {
+                return GatherAwaiter{std::forward<_Futs>(_futures)...};
             },
             std::move(futures_));
     }
