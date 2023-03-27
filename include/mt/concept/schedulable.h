@@ -13,11 +13,11 @@ namespace concepts {
 
 template <typename _Task>
 concept Schedulable = requires(_Task _task) {
-                          _task.valid();
-                          _task.done();
-                          _task.schedule();
-                          _task.cancel();
-                      };
+    _task.valid();
+    _task.done();
+    _task.schedule();
+    _task.cancel();
+};
 
 template <typename _Task>
 concept SchedulableTask = concepts::Future<_Task> && concepts::Schedulable<_Task>;

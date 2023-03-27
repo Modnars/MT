@@ -14,13 +14,13 @@ namespace concepts {
 
 template <typename _Promise>
 concept Promise = requires(_Promise _promise) {
-                      { _promise.get_return_object() } -> Future;
-                      { _promise.initial_suspend() } -> Awaiter;
-                      { _promise.final_suspend() } noexcept -> Awaiter;
-                      _promise.unhandled_exception();
-                      requires(
-                          requires(int v) { _promise.return_value(v); } || requires { _promise.return_void(); });
-                  };
+    { _promise.get_return_object() } -> Future;
+    { _promise.initial_suspend() } -> Awaiter;
+    { _promise.final_suspend() } noexcept -> Awaiter;
+    _promise.unhandled_exception();
+    requires(
+        requires(int v) { _promise.return_value(v); } || requires { _promise.return_void(); });
+};
 
 }  // namespace concepts
 }  // namespace mt

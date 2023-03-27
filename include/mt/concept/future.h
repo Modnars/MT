@@ -16,11 +16,11 @@ namespace concepts {
 
 template <typename _Future>
 concept Future = Awaiter<_Future> && requires(_Future _future) {
-                                         requires !std::default_initializable<_Future>;
-                                         requires std::move_constructible<_Future>;
-                                         typename std::remove_cvref_t<_Future>::promise_type;
-                                         _future.result();
-                                     };
+    requires !std::default_initializable<_Future>;
+    requires std::move_constructible<_Future>;
+    typename std::remove_cvref_t<_Future>::promise_type;
+    _future.result();
+};
 
 }  // namespace concepts
 }  // namespace mt

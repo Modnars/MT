@@ -22,8 +22,8 @@ namespace mt {
 namespace concepts {
 template <typename _ConnectCallBack>
 concept ConnectCallBack = requires(_ConnectCallBack call_back) {
-                              { call_back(std::declval<Stream>()) } -> concepts::Awaiter;
-                          };
+    { call_back(std::declval<Stream>()) } -> concepts::Awaiter;
+};
 
 }  // namespace concepts
 

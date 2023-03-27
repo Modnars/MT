@@ -22,8 +22,8 @@ struct ScheduledTask : private NonCopyable {
 
     void cancel() { task_.cancel(); }
 
-    decltype(auto) operator co_await() const &noexcept { return task_.operator co_await(); }
-    auto operator co_await() const &&noexcept { return task_.operator co_await(); }
+    decltype(auto) operator co_await() const & noexcept { return task_.operator co_await(); }
+    auto operator co_await() const && noexcept { return task_.operator co_await(); }
 
     decltype(auto) result() & { return task_.result(); }
     decltype(auto) result() && { return std::move(task_).result(); }

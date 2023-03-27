@@ -91,11 +91,9 @@ struct GatherAwaiterRepository {
     explicit GatherAwaiterRepository(_Futures &&...futures) : futures_(std::forward<_Futures>(futures)...) { }
 
     auto operator co_await() && {
-        return std::apply(
-            []<concepts::Awaiter... _Futs>(_Futs && ..._futures) {
-                return GatherAwaiter{std::forward<_Futs>(_futures)...};
-            },
-            std::move(futures_));
+        return std::apply([]<concepts::Awaiter... _Futs>(
+                              _Futs &&..._futures) { return GatherAwaiter{std::forward<_Futs>(_futures)...}; },
+                          std::move(futures_));
     }
 
 private:
@@ -107,7 +105,7 @@ private:
 };
 
 template <concepts::Awaiter... _Futures>  // need deduction guide to deduce future type
-GatherAwaiterRepository(_Futures &&...)->GatherAwaiterRepository<_Futures...>;
+GatherAwaiterRepository(_Futures &&...) -> GatherAwaiterRepository<_Futures...>;
 
 template <concepts::Awaiter... _Futures>
 auto gather(NoWaitAtInitialSuspend, _Futures &&...futures)

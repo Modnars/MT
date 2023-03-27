@@ -32,9 +32,9 @@ struct Awaitable<_Tp> : std::type_identity<decltype(std::declval<_Tp>().operator
 
 template <typename _Tp>
 requires requires(_Tp &&_obj) {
-             operator co_await(std::forward<_Tp>(_obj));
-             requires !(requires { std::forward<_Tp>(_obj).operator co_await(); });
-         }
+    operator co_await(std::forward<_Tp>(_obj));
+    requires !(requires { std::forward<_Tp>(_obj).operator co_await(); });
+}
 struct Awaitable<_Tp> : std::type_identity<decltype(operator co_await(std::declval<_Tp>()))> { };
 
 template <typename _Tp>
@@ -46,13 +46,13 @@ namespace concepts {
 
 template <typename _Tp>
 concept Awaiter = requires {
-                      typename detail::Awaitable_t<_Tp>;
-                      requires requires(detail::Awaitable_t<_Tp> _awaiter, std::coroutine_handle<> _handle) {
-                                   { _awaiter.await_ready() } -> std::convertible_to<bool>;
-                                   _awaiter.await_suspend(_handle);
-                                   _awaiter.await_resume();
-                               };
-                  };
+    typename detail::Awaitable_t<_Tp>;
+    requires requires(detail::Awaitable_t<_Tp> _awaiter, std::coroutine_handle<> _handle) {
+        { _awaiter.await_ready() } -> std::convertible_to<bool>;
+        _awaiter.await_suspend(_handle);
+        _awaiter.await_resume();
+    };
+};
 
 }  // namespace concepts
 

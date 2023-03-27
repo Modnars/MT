@@ -112,7 +112,7 @@ public:
 
     decltype(auto) result() && { return std::move(handle_.promise()).result(); }
 
-    auto operator co_await() const &noexcept {
+    auto operator co_await() const & noexcept {
         struct AwaiterImpl : AwaiterBase {
             decltype(auto) await_resume() const {
                 if (!AwaiterBase::self_coro_) [[unlikely]] {
@@ -124,7 +124,7 @@ public:
         return AwaiterImpl{handle_};
     }
 
-    auto operator co_await() const &&noexcept {
+    auto operator co_await() const && noexcept {
         struct AwaiterImpl : AwaiterBase {
             decltype(auto) await_resume() const {
                 if (!AwaiterBase::self_coro_) [[unlikely]] {
