@@ -13,8 +13,8 @@
 namespace mt {
 
 template <concepts::SchedulableTask _Task>
-decltype(auto) run(_Task &&_task) {
-    auto st = scheduled_task(std::forward<_Task>(_task));
+decltype(auto) run(_Task &&task) {
+    auto st = scheduled_task(std::forward<_Task>(task));
     get_event_loop().run_until_complete();
     if constexpr (std::is_lvalue_reference_v<_Task &&>) {
         return st.result();
