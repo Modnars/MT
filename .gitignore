@@ -1,3 +1,7 @@
 .vscode/
 .build/
 build/
+
+# clangd index. (".clangd" is a config file now, thus trailing slash)
+.clangd/
+.cache
