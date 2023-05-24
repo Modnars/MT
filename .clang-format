@@ -8,22 +8,22 @@ AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 BraceWrapping:
-  AfterClass:       true
-  AfterEnum:        true
-  AfterFunction:    true
-  AfterNamespace:   true
-  AfterStruct:      true
-  AfterUnion:       true
-  BeforeCatch:      true
-  BeforeElse:       true
-  AfterCaseLabel:   true
-  AfterExternBlock: true
+  AfterClass:            true
+  AfterEnum:             true
+  AfterFunction:         true
+  AfterNamespace:        true
+  AfterStruct:           true
+  AfterUnion:            true
+  BeforeCatch:           true
+  BeforeElse:            true
+  AfterCaseLabel:        true
+  AfterExternBlock:      true
   AfterObjCDeclaration:  true
   AfterControlStatement: true
 BreakBeforeBraces: Attach
 ColumnLimit: 120
 IndentWidth: 4
-TabWidth:    4
+TabWidth: 4
 IncludeBlocks: Preserve
 
 SpacesBeforeTrailingComments: 2  # 单行代码注释前填充两个空格
@@ -33,4 +33,6 @@ Cpp11BracedListStyle: true
 SpaceInEmptyBlock: true  # 空代码块使用单个空格填充
 
 # clang-format 15
+RequiresClausePosition: OwnLine
 IndentRequiresClause: false
+
