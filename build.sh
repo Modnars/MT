@@ -4,7 +4,7 @@
  # @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
 ### 
 
-build_dir="./.build/"
+build_dir="./build/"
 target=${1-"use_cache"}
 
 if [[ "$target" == "all" ]]; then 
