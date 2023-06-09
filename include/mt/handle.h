@@ -17,7 +17,7 @@ using HandleId = std::uint64_t;
 
 struct Handle {
 public:
-    enum class STATE : uint8_t {
+    enum class STATE : std::uint8_t {
         UNSCHEDULED,
         SCHEDULED,
         SUSPENDED,

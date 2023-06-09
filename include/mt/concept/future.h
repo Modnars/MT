@@ -9,7 +9,6 @@
 #include <concepts>
 
 #include <mt/concept/awaitable.h>
-#include <mt/handle.h>
 
 namespace mt {
 namespace concepts {
