@@ -24,40 +24,41 @@ struct dump;
 template <std::size_t N>
 mt::Task<> coro_depth_n(std::vector<int> &result) {
     result.push_back(N);
-    if constexpr (N > 0) {
+    if constexpr (N > 0UL) {
         co_await coro_depth_n<N - 1>(result);
         result.push_back(N * 10);
     }
 }
 
-SCENARIO("test Task await") {
+SCENARIO("test Task await", "[tag1]") {
     std::vector<int> result;
+
     GIVEN("simple await") {
-        mt::run(coro_depth_n<0>(result));
+        mt::run(coro_depth_n<0UL>(result));
         std::vector<int> expected{0};
         REQUIRE(result == expected);
     }
 
     GIVEN("nest await") {
-        mt::run(coro_depth_n<1>(result));
+        mt::run(coro_depth_n<1UL>(result));
         std::vector<int> expected{1, 0, 10};
         REQUIRE(result == expected);
     }
 
     GIVEN("3 depth await") {
-        mt::run(coro_depth_n<2>(result));
+        mt::run(coro_depth_n<2UL>(result));
         std::vector<int> expected{2, 1, 0, 10, 20};
         REQUIRE(result == expected);
     }
 
     GIVEN("4 depth await") {
-        mt::run(coro_depth_n<3>(result));
+        mt::run(coro_depth_n<3UL>(result));
         std::vector<int> expected{3, 2, 1, 0, 10, 20, 30};
         REQUIRE(result == expected);
     }
 
     GIVEN("5 depth await") {
-        mt::run(coro_depth_n<4>(result));
+        mt::run(coro_depth_n<4UL>(result));
         std::vector<int> expected{4, 3, 2, 1, 0, 10, 20, 30, 40};
         REQUIRE(result == expected);
     }
