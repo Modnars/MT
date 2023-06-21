@@ -1,44 +1,43 @@
+#include <csignal>
 #include <iostream>
-#include "../pb/echo.pb.h"
-#include "rpc_channel.h"
+
+#include "echo.pb.h"
+
 #include "conn_mgr.h"
 #include "llbc.h"
+#include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
-#include <csignal>
 
 using namespace llbc;
 
 bool stop = false;
 
 void signalHandler(int signum) {
-  std::cout << "Interrupt signal (" << signum << ") received.\n";
-  stop = true;
+    std::cout << "Interrupt signal (" << signum << ") received.\n";
+    stop = true;
 }
 
-int main() 
-{
+int main() {
     // // 注册信号 SIGINT 和信号处理程序
-    // signal(SIGINT, signalHandler);  
+    // signal(SIGINT, signalHandler);
 
     // 初始化llbc库
     LLBC_Startup();
     LLBC_Defer(LLBC_Cleanup());
-    
+
     // 初始化日志
     auto ret = LLBC_LoggerMgrSingleton->Initialize("log/cfg/server_log.cfg");
-    if (ret == LLBC_FAILED)
-    {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Initialize logger failed, error:%s",  LLBC_FormatLastError());
+    if (ret == LLBC_FAILED) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Initialize logger failed, error:%s", LLBC_FormatLastError());
         return -1;
     }
 
     // 初始化连接管理器
     ConnMgr *connMgr = new ConnMgr();
     ret = connMgr->Init();
-    if(ret != LLBC_OK)
-    {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Initialize connMgr failed, error:%s",  LLBC_FormatLastError());
+    if (ret != LLBC_OK) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Initialize connMgr failed, error:%s", LLBC_FormatLastError());
         return -1;
     }
     // if (connMgr->StartRpcService("127.0.0.1", 6688) == LLBC_FAILED)
@@ -52,8 +51,7 @@ int main()
     RpcChannel *channel = connMgr->CreateRpcChannel("127.0.0.1", 6688);
     LLBC_Defer(delete channel);
 
-    if (!channel)
-    {
+    if (!channel) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CreateRpcChannel Fail");
         return -1;
     }
@@ -64,7 +62,7 @@ int main()
     echo::EchoRequest req;
     echo::EchoResponse rsp;
     req.set_msg("hello, myrpc.");
-    
+
     // 创建rpc controller & stub
     MyController cntl;
     echo::EchoService_Stub stub(channel);
@@ -85,8 +83,7 @@ int main()
     // }
 
     // 直接调用方案
-    while (!stop)
-    {
+    while (!stop) {
         stub.Echo(&cntl, &req, &rsp, nullptr);
         // std::cout << "resp:" << response.msg() << std::endl;
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv rsp:%s", rsp.msg().c_str());

@@ -10,8 +10,10 @@ build/
 *.o
 *.log
 *.cmake
-rpc/rpc-demo/CMakeFiles
-rpc/rpc-demo/CMakeCache.txt
-rpc/rpc-demo/Makefile
-rpc/rpc-demo/server
-rpc/rpc-demo/client
+
+# rpc demo project
+rpc/demo/CMakeFiles
+rpc/demo/CMakeCache.txt
+rpc/demo/Makefile
+rpc/demo/server
+rpc/demo/client

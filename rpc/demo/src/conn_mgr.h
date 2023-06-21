@@ -1,10 +1,10 @@
 /*
- * @file: 
+ * @file:
  * @Author: regangcli
  * @copyright: Tencent Technology (Shenzhen) Company Limited
  * @Date: 2023-06-19 20:39:04
  * @edit: regangcli
- * @brief: 
+ * @brief:
  */
 
 #pragma once
@@ -14,16 +14,14 @@ using namespace llbc;
 
 class RpcChannel;
 
-enum RpcOpCode
-{
+enum RpcOpCode {
     RpcReq = 1,
     RpcRsp = 2,
 };
 
 // 简单双线程无锁循环队列, 只提供两个方法, Push和Pop分别只能由一个线程调用
-template<typename T, int QueueCapacity>
-class LockFreeQueue
-{
+template <typename T, int QueueCapacity>
+class LockFreeQueue {
 public:
     bool Push(T *);
     T *Pop();
@@ -31,15 +29,15 @@ public:
     // bool IsEmpty() { return rdIdx_ == wtIdx_; }
     int GetSize();
     int GetCapacity() { return QueueCapacity; };
+
 private:
     volatile int rdIdx_ = 0;
     volatile int wtIdx_ = 0;
     T *queue_[QueueCapacity] = {};  // 数据队列
 };
 
-template<typename T, int QueueCapacity>
-bool LockFreeQueue<T, QueueCapacity>::Push(T *val)
-{
+template <typename T, int QueueCapacity>
+bool LockFreeQueue<T, QueueCapacity>::Push(T *val) {
     int size = wtIdx_ - rdIdx_;
     if (size < 0)
         size += QueueCapacity;
@@ -50,31 +48,28 @@ bool LockFreeQueue<T, QueueCapacity>::Push(T *val)
 
     queue_[wtIdx_] = val;
     // 写内存barrier, 防止乱序执行导致queue_[wtIdx_] 值未完全写入，后台线程就开始处理了
-    __asm__ __volatile__("sfence":::"memory");
+    __asm__ __volatile__("sfence" ::: "memory");
     wtIdx_ = (wtIdx_ + 1) % QueueCapacity;
     return true;
 }
 
-template<typename T, int QueueCapacity>
-T *LockFreeQueue<T, QueueCapacity>::Pop()
-{
-    if (rdIdx_ != wtIdx_)
-    {
+template <typename T, int QueueCapacity>
+T *LockFreeQueue<T, QueueCapacity>::Pop() {
+    if (rdIdx_ != wtIdx_) {
         auto val = queue_[rdIdx_];
-        #ifdef NEXT_DEBUG
-            queue_[rdIdx_] = nullptr;
-            __asm__ __volatile__("sfence":::"memory");
-        #endif
+#ifdef NEXT_DEBUG
+        queue_[rdIdx_] = nullptr;
+        __asm__ __volatile__("sfence" ::: "memory");
+#endif
         rdIdx_ = (rdIdx_ + 1) % QueueCapacity;
         return val;
     }
 
-    return nullptr;  
+    return nullptr;
 }
 
-template<typename T, int QueueCapacity>
-int LockFreeQueue<T, QueueCapacity>::GetSize() 
-{ 
+template <typename T, int QueueCapacity>
+int LockFreeQueue<T, QueueCapacity>::GetSize() {
     int size = wtIdx_ - rdIdx_;
     if (size < 0)
         size += QueueCapacity;
@@ -82,11 +77,10 @@ int LockFreeQueue<T, QueueCapacity>::GetSize()
 }
 
 // 连接管理组件
-class ConnComp : public LLBC_Component
-{
+class ConnComp : public LLBC_Component {
 public:
     ConnComp();
-    virtual ~ConnComp() {};
+    virtual ~ConnComp(){};
 
 public:
     // 放入发送包
@@ -106,6 +100,7 @@ public:
     virtual void OnAsyncConnResult(const LLBC_AsyncConnResult &result);
     virtual void OnUnHandledPacket(const LLBC_Packet &packet);
     virtual void OnProtoReport(const LLBC_ProtoReport &report);
+
 public:
     // 接收数据回调
     void OnRecvData(LLBC_Packet &packet);
@@ -116,8 +111,7 @@ private:
 };
 
 // 连接管理器
-class ConnMgr
-{
+class ConnMgr {
 public:
     ConnMgr();
     virtual ~ConnMgr();

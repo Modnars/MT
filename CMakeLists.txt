@@ -7,8 +7,8 @@ project(${TARGET_NAME}
         VERSION ${PROJECT_VERSION}
         LANGUAGES CXX)
 
-set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -Wall -Werror")
-set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -Wall -Werror")
+set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 message(CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -47,6 +47,7 @@ set(MT_INCLUDE
         include/mt/void_value.h
         include/mt/wait_for.h
         )
+set(3RD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rd")
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 add_library(${TARGET_NAME} SHARED
@@ -57,6 +58,7 @@ target_link_libraries(${TARGET_NAME} PUBLIC fmt::fmt)
 
 add_subdirectory(test)
 add_subdirectory(3rd)
+add_subdirectory(rpc)
 
 set(MODELS_CMAKE_FILES
     "cmake/mtConfig.cmake"

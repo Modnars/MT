@@ -1,10 +1,10 @@
 /*
- * @file: 
+ * @file:
  * @Author: regangcli
  * @copyright: Tencent Technology (Shenzhen) Company Limited
  * @Date: 2023-06-20 20:13:23
  * @edit: regangcli
- * @brief: 
+ * @brief:
  */
 
 #pragma once
@@ -12,41 +12,38 @@
 #include "llbc.h"
 
 class BaseRpcCoroMgr;
-class Coro
-{
+class Coro {
     LLBC_DISABLE_ASSIGNMENT(Coro);
 
-    #pragma region 构造 / 析构
+#pragma region 构造 / 析构
 public:
-    Coro(const std::function<void(void*)>& entry,
-         void* args,
-         const llbc::LLBC_Variant& user_data);
+    Coro(const std::function<void(void *)> &entry, void *args, const llbc::LLBC_Variant &user_data);
 
     ~Coro();
-    #pragma endregion
+#pragma endregion
 
-    #pragma region 操作方法
+#pragma region 操作方法
 public:
     // 挂起 coro
-    int Yield(const llbc::LLBC_TimeSpan& timeout = llbc::LLBC_TimeSpan::zero);
+    int Yield(const llbc::LLBC_TimeSpan &timeout = llbc::LLBC_TimeSpan::zero);
     // 恢复 coro
-    int Resume(const llbc::LLBC_Variant& pass_data = llbc::LLBC_Variant::nil);
+    int Resume(const llbc::LLBC_Variant &pass_data = llbc::LLBC_Variant::nil);
     // 判断是否为主协程
     bool IsMainCoro() const;
 
     // 取消 coro
     int Cancel();
-    #pragma endregion
+#pragma endregion
 
-    #pragma region 属性访问
+#pragma region 属性访问
 public:
     // 获取 coro ID
     llbc::uint64 GetId() const { return coroId_; }
 
     // 获取 coro entry
-    const std::function<void(void*)>& GetEntry() const { return entry_; }
+    const std::function<void(void *)> &GetEntry() const { return entry_; }
     // 获取 coro args
-    void* GetArgs() const { return args_; }
+    void *GetArgs() const { return args_; }
 
     // 获取 coro param1
     int GetParam1() const { return param1; }
@@ -55,26 +52,24 @@ public:
     int GetParam2() const { return param2; }
     void SetParam2(int param) { param2 = param; }
     // 获取 coro ptrParam1
-    void* GetPtrParam1() const { return ptrParam1; }
-    void SetPtrParam1(void* param) { ptrParam1 = param; }
-    
+    void *GetPtrParam1() const { return ptrParam1; }
+    void SetPtrParam1(void *param) { ptrParam1 = param; }
+
     // 获取 coro user_data
     std::string &GetUserData() { return userData_; }
 
 private:
-    BaseRpcCoroMgr* coroMgr{nullptr}; // coro component
-    llbc::uint64 coroId_{0}; // coro id
-    std::function<void(void*)> entry_{nullptr}; // coro 逻辑执行 delegate
-    void *args_{nullptr}; // coro 逻辑执行 delegate 参数
-    std::string &userData_; // coro user data
+    BaseRpcCoroMgr *coroMgr{nullptr};             // coro component
+    llbc::uint64 coroId_{0};                      // coro id
+    std::function<void(void *)> entry_{nullptr};  // coro 逻辑执行 delegate
+    void *args_{nullptr};                         // coro 逻辑执行 delegate 参数
+    std::string &userData_;                       // coro user data
     int param1 = 0;
     int param2 = 0;
     void *ptrParam1 = nullptr;
 };
 
-
-class BaseRpcCoroMgr
-{
+class BaseRpcCoroMgr {
 public:
     BaseRpcCoroMgr();
     virtual ~BaseRpcCoroMgr();
@@ -82,9 +77,7 @@ public:
     virtual bool HasCoro() = 0;
 
     // Create coroutine.
-    virtual Coro *CreateCoro(const std::function<void(void *)> &entry,
-                              void *args,
-                              const std::string &userData) = 0;
+    virtual Coro *CreateCoro(const std::function<void(void *)> &entry, void *args, const std::string &userData) = 0;
 
     virtual Coro *GetCoro(const int64_t &coroId) = 0;
 
@@ -99,8 +92,6 @@ public:
 
     // Get coroutine
     virtual int64_t GetCurCoroId() = 0;
-
-
 };
 
 // 协程管理器、Todo:待实现

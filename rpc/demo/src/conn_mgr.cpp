@@ -1,75 +1,61 @@
 /*
- * @file: 
+ * @file:
  * @Author: regangcli
  * @copyright: Tencent Technology (Shenzhen) Company Limited
  * @Date: 2023-06-19 20:34:15
  * @edit: regangcli
- * @brief: 
+ * @brief:
  */
 #include "conn_mgr.h"
 #include "rpc_channel.h"
 
-ConnComp::ConnComp(): LLBC_Component(LLBC_ComponentEvents::DefaultEvents | LLBC_ComponentEvents::OnUpdate)
-{
-}
+ConnComp::ConnComp() : LLBC_Component(LLBC_ComponentEvents::DefaultEvents | LLBC_ComponentEvents::OnUpdate) { }
 
-bool ConnComp::OnInit(bool &initFinished)
-{
+bool ConnComp::OnInit(bool &initFinished) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Service create!");
     return true;
 }
 
-void ConnComp::OnDestroy(bool &destroyFinished)
-{
+void ConnComp::OnDestroy(bool &destroyFinished) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Service destroy!");
 }
 
-void ConnComp::OnSessionCreate(const LLBC_SessionInfo &sessionInfo)
-{
+void ConnComp::OnSessionCreate(const LLBC_SessionInfo &sessionInfo) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Session Create: %s", sessionInfo.ToString().c_str());
 }
 
-void ConnComp::OnSessionDestroy(const LLBC_SessionDestroyInfo &destroyInfo)
-{
+void ConnComp::OnSessionDestroy(const LLBC_SessionDestroyInfo &destroyInfo) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Session Destroy, info: %s", destroyInfo.ToString().c_str());
 }
 
-void ConnComp::OnAsyncConnResult(const LLBC_AsyncConnResult &result)
-{
+void ConnComp::OnAsyncConnResult(const LLBC_AsyncConnResult &result) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Async-Conn result: %s", result.ToString().c_str());
 }
 
-void ConnComp::OnUnHandledPacket(const LLBC_Packet &packet)
-{
+void ConnComp::OnUnHandledPacket(const LLBC_Packet &packet) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Unhandled packet, sessionId: %d, opcode: %d, payloadLen: %ld",
-        packet.GetSessionId(), packet.GetOpcode(), packet.GetPayloadLength());
+         packet.GetSessionId(), packet.GetOpcode(), packet.GetPayloadLength());
 }
 
-void ConnComp::OnProtoReport(const LLBC_ProtoReport &report)
-{
+void ConnComp::OnProtoReport(const LLBC_ProtoReport &report) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Proto report: %s", report.ToString().c_str());
 }
 
-void ConnComp::OnUpdate()
-{
+void ConnComp::OnUpdate() {
     auto *sendPacket = sendQueue_.Pop();
-    while (sendPacket)
-    {
+    while (sendPacket) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "sendPacket:%s", sendPacket->ToString().c_str());
         auto ret = GetService()->Send(sendPacket);
-        if (ret != LLBC_OK)
-        {
+        if (ret != LLBC_OK) {
             LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Send packet failed, err: %s", LLBC_FormatLastError());
         }
 
         // LLBC_Recycle(sendPacket);
         sendPacket = sendQueue_.Pop();
     }
-    
 }
 
-void ConnComp::OnRecvData(LLBC_Packet &packet)
-{
+void ConnComp::OnRecvData(LLBC_Packet &packet) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRecvPacket:%s", packet.ToString().c_str());
     LLBC_Packet *recvPacket = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
     recvPacket->SetHeader(packet, packet.GetOpcode(), 0);
@@ -77,25 +63,20 @@ void ConnComp::OnRecvData(LLBC_Packet &packet)
     recvQueue_.Push(recvPacket);
 }
 
-
-int ConnComp::PushPacket(LLBC_Packet *sendPacket)
-{
+int ConnComp::PushPacket(LLBC_Packet *sendPacket) {
     if (sendQueue_.Push(sendPacket))
         return LLBC_OK;
 
     return LLBC_FAILED;
 }
 
-ConnMgr::ConnMgr()
-{
+ConnMgr::ConnMgr() {
     // Init();
 }
 
-ConnMgr::~ConnMgr()
-{}
+ConnMgr::~ConnMgr() { }
 
-int ConnMgr::Init()
-{
+int ConnMgr::Init() {
     // Create service
     svc_ = LLBC_Service::Create("SvcTest");
     comp_ = new ConnComp;
@@ -109,13 +90,11 @@ int ConnMgr::Init()
     return ret;
 }
 
-int ConnMgr::StartRpcService(const char *ip, int port)
-{
+int ConnMgr::StartRpcService(const char *ip, int port) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "ConnMgr StartRpcService");
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Server Will listening in %s:%d", ip, port);
     int serverSessionId_ = svc_->Listen(ip, port);
-    if (serverSessionId_ == 0)
-    {
+    if (serverSessionId_ == 0) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Create session failed, reason: %s", LLBC_FormatLastError());
         return LLBC_FAILED;
     }
@@ -125,21 +104,18 @@ int ConnMgr::StartRpcService(const char *ip, int port)
 }
 
 // 创建rpc客户端通信通道
-RpcChannel *ConnMgr::CreateRpcChannel(const char *ip, int port)
-{
+RpcChannel *ConnMgr::CreateRpcChannel(const char *ip, int port) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CreateRpcChannel");
     auto sessionId = svc_->Connect(ip, port);
-    if (sessionId == 0)
-    {
+    if (sessionId == 0) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Create session failed, reason: %s", LLBC_FormatLastError());
         return nullptr;
     }
-    
+
     return new RpcChannel(this, sessionId);
 }
 
-int ConnMgr::CloseSession(int sessionId)
-{
+int ConnMgr::CloseSession(int sessionId) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CloseSession, %d", sessionId);
     return svc_->RemoveSession(sessionId);
 }
@@ -168,8 +144,8 @@ int ConnMgr::CloseSession(int sessionId)
 //         int sessionId = svc->Listen(ip, port);
 //         if (sessionId == 0)
 //         {
-//             LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Create session failed, reason: %s", LLBC_FormatLastError());
-//             delete svc;
+//             LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Create session failed, reason: %s",
+//             LLBC_FormatLastError()); delete svc;
 
 //             return LLBC_FAILED;
 //         }
@@ -180,8 +156,8 @@ int ConnMgr::CloseSession(int sessionId)
 //         sendSessionId_ = svc->Connect(ip, port);
 //         if (sendSessionId_ == 0)
 //         {
-//             LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Create session failed, reason: %s", LLBC_FormatLastError());
-//             delete svc;
+//             LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Create session failed, reason: %s",
+//             LLBC_FormatLastError()); delete svc;
 
 //             return LLBC_FAILED;
 //         }
