@@ -11,6 +11,8 @@
 
 #include "llbc.h"
 
+// #define UseCoroRpc
+
 class BaseRpcCoroMgr;
 class Coro {
     LLBC_DISABLE_ASSIGNMENT(Coro);
@@ -119,4 +121,4 @@ public:
 // };
 
 // 全局协程管理单例,Todo:待实现
-// BaseRpcCoroMgr* g_rpcCoroMgr = nullptr;
+extern BaseRpcCoroMgr *g_rpcCoroMgr;

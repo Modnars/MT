@@ -1,9 +1,7 @@
 #include <csignal>
 #include <iostream>
-
-#include "echo.pb.h"
-
 #include "conn_mgr.h"
+#include "echo.pb.h"
 #include "llbc.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
@@ -19,8 +17,8 @@ void signalHandler(int signum) {
 }
 
 int main() {
-    // // 注册信号 SIGINT 和信号处理程序
-    // signal(SIGINT, signalHandler);
+    // 注册信号 SIGINT 和信号处理程序
+    signal(SIGINT, signalHandler);
 
     // 初始化llbc库
     LLBC_Startup();
@@ -67,21 +65,20 @@ int main() {
     MyController cntl;
     echo::EchoService_Stub stub(channel);
 
-    // // 协程方案, 在新协程中call rpc
-    // RpcServiceMgr serviceMgr(connMgr);
-    // while (!stop)
-    // {
-    //     // 创建协程并Resume
-    //     auto func = [&stub, &cntl, &channel, &req, &rsp](void *){
-    //         stub.Echo(&cntl, &req, &rsp, nullptr);
-    //     };
-    //     auto coro = g_rpcCoroMgr->CreateCoro(func, nullptr);
-    //     coro->Resume();
+#ifdef UseCoroRpc
+    // 协程方案, 在新协程中call rpc
+    RpcServiceMgr serviceMgr(connMgr);
+    while (!stop) {
+        // 创建协程并Resume
+        auto func = [&stub, &cntl, &channel, &req, &rsp](void *) { stub.Echo(&cntl, &req, &rsp, nullptr); };
+        auto coro = g_rpcCoroMgr->CreateCoro(func, nullptr, "");
+        coro->Resume();
 
-    //     // 处理服务收到的数据包，若有Rpc Rsp，OnUpdate内部会唤醒对应休眠的协程
-    //     serviceMgr.OnUpdate();
-    // }
+        // 处理服务收到的数据包，若有Rpc Rsp，OnUpdate内部会唤醒对应休眠的协程
+        connMgr->Tick();
+    }
 
+#else
     // 直接调用方案
     while (!stop) {
         stub.Echo(&cntl, &req, &rsp, nullptr);
@@ -89,6 +86,7 @@ int main() {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv rsp:%s", rsp.msg().c_str());
         LLBC_Sleep(1000);
     }
+#endif
 
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "client Stop");
 

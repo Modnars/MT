@@ -13,16 +13,29 @@
 #include "google/protobuf/service.h"
 #include "google/protobuf/stubs/common.h"
 
+namespace llbc
+{
+    class LLBC_Packet;
+}
+
 class ConnMgr;
 class RpcServiceMgr {
 public:
-    RpcServiceMgr(ConnMgr *connMgr) { connMgr_ = connMgr; }
+    RpcServiceMgr(ConnMgr *connMgr);
+    virtual ~RpcServiceMgr();
 
-    void OnUpdate();
+    // // 初始化
+    // int Init();
+    // // 更新，弃用
+    // void OnUpdate();
     // 添加服务
     void AddService(::google::protobuf::Service *service);
 
 private:
+    // 处理RPC请求和返回包
+    void HandleRpcReq(llbc::LLBC_Packet &packet);
+    void HandleRpcRsp(llbc::LLBC_Packet &packet);
+    // 处理RPC处理结束
     void OnRpcDone(::google::protobuf::Message *recv_msg, ::google::protobuf::Message *resp_msg);
     // void dispatch_msg(
     //         const std::string& service_name,

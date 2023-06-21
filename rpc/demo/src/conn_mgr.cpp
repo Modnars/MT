@@ -55,7 +55,7 @@ void ConnComp::OnUpdate() {
     }
 }
 
-void ConnComp::OnRecvData(LLBC_Packet &packet) {
+void ConnComp::OnRecvPacket(LLBC_Packet &packet) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRecvPacket:%s", packet.ToString().c_str());
     LLBC_Packet *recvPacket = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
     recvPacket->SetHeader(packet, packet.GetOpcode(), 0);
@@ -81,9 +81,8 @@ int ConnMgr::Init() {
     svc_ = LLBC_Service::Create("SvcTest");
     comp_ = new ConnComp;
     svc_->AddComponent(comp_);
-    svc_->Subscribe(RpcOpCode::RpcReq, comp_, &ConnComp::OnRecvData);
-    svc_->Subscribe(RpcOpCode::RpcRsp, comp_, &ConnComp::OnRecvData);
-    svc_->Subscribe(0, comp_, &ConnComp::OnRecvData);
+    svc_->Subscribe(RpcOpCode::RpcReq, comp_, &ConnComp::OnRecvPacket);
+    svc_->Subscribe(RpcOpCode::RpcRsp, comp_, &ConnComp::OnRecvPacket);
     svc_->SuppressCoderNotFoundWarning();
     auto ret = svc_->Start(1);
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Service start, ret: %d", ret);
@@ -118,6 +117,41 @@ RpcChannel *ConnMgr::CreateRpcChannel(const char *ip, int port) {
 int ConnMgr::CloseSession(int sessionId) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CloseSession, %d", sessionId);
     return svc_->RemoveSession(sessionId);
+}
+
+bool ConnMgr::Tick() {
+    auto ret = false;
+    // LLOG(nullptr, nullptr, LLBC_LogLevel::Warn, "Tick");
+    // 读取接收到的数据包并给对应的订阅者处理
+    auto packet = PopPacket();
+    while (packet) {
+        ret = true;
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Warn, "Tick");
+        auto it = packetDelegs_.find(packet->GetOpcode());
+        if (it == packetDelegs_.end())
+            LLOG(nullptr, nullptr, LLBC_LogLevel::Warn, "Recv Untapped opcode:%d", packet->GetOpcode());
+        else
+            (it->second)(*packet);
+
+        // 取下一个包
+        LLBC_Recycle(packet);
+        packet = PopPacket();
+    }
+
+    return ret;
+}
+
+int ConnMgr::Subscribe(int cmdId, const LLBC_Delegate<void(LLBC_Packet &)> &deleg) {
+    auto pair = packetDelegs_.emplace(cmdId, deleg);
+    if (!pair.second) {
+        return LLBC_FAILED;
+    }
+
+    return LLBC_OK;
+}
+
+void ConnMgr::Unsubscribe(int cmdId) {
+    packetDelegs_.erase(cmdId);
 }
 
 // int ConnMgr::Init(const char *ip, int port, bool asClient)

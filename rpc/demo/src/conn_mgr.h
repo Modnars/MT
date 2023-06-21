@@ -103,7 +103,7 @@ public:
 
 public:
     // 接收数据回调
-    void OnRecvData(LLBC_Packet &packet);
+    void OnRecvPacket(LLBC_Packet &packet);
 
 private:
     LockFreeQueue<LLBC_Packet, 1024> sendQueue_;
@@ -117,6 +117,7 @@ public:
     virtual ~ConnMgr();
 
 public:
+    // 初始化
     int Init();
     // 启动rpc网络服务
     int StartRpcService(const char *ip, int port);
@@ -124,14 +125,25 @@ public:
     RpcChannel *CreateRpcChannel(const char *ip, int port);
     // 销毁rpc客户端通信通道
     int CloseSession(int sessionId);
+    // 放入发送包
     int PushPacket(LLBC_Packet *sendPacket) { return comp_->PushPacket(sendPacket); }
+    // 取出接收包
     LLBC_Packet *PopPacket() { return comp_->PopPacket(); }
+    // 获取服务器SessionId
     int GetServerSessionId() { return serverSessionId_; }
+    // 是否是服务器
     bool IsServer() { return isServer_; }
+    // 更新处理收到的Rpc数据包，需要主线程定时Tick
+    bool Tick();
+    // 订阅指定cmdId的数据包处理回调
+    int Subscribe(int cmdId, const LLBC_Delegate<void(LLBC_Packet &)> &deleg);
+    // 取消订阅cmdId的数据包
+    void Unsubscribe(int cmdId);
 
 private:
     bool isServer_ = false;
     LLBC_Service *svc_ = nullptr;
     ConnComp *comp_ = nullptr;
     int serverSessionId_ = 0;
+    std::unordered_map<int, LLBC_Delegate<void(LLBC_Packet &)>> packetDelegs_;  // {cmdId : delegate}
 };

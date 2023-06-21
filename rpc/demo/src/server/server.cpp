@@ -1,23 +1,11 @@
 #include <csignal>
-
-#include "echo.pb.h"
-
 #include "conn_mgr.h"
+#include "echo_service_impl.h"
 #include "llbc.h"
 #include "rpc_channel.h"
 #include "rpc_service_mgr.h"
 
 using namespace llbc;
-
-class MyEchoService : public echo::EchoService {
-public:
-    virtual void Echo(::google::protobuf::RpcController * /* controller */, const ::echo::EchoRequest *request,
-                      ::echo::EchoResponse *response, ::google::protobuf::Closure *done) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "received, msg:%s", request->msg().c_str());
-        response->set_msg(std::string("I have received '") + request->msg() + std::string("'"));
-        done->Run();
-    }
-};  // MyEchoService
 
 bool stop = false;
 
@@ -57,7 +45,7 @@ int main() {
 
     // 死循环处理rpc请求
     while (!stop) {
-        serviceMgr.OnUpdate();
+        connMgr->Tick();
         LLBC_Sleep(1);
     }
 

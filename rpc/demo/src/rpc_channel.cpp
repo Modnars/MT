@@ -21,13 +21,14 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
                             ::google::protobuf::RpcController * /* controller */,
                             const ::google::protobuf::Message *request, ::google::protobuf::Message *response,
                             ::google::protobuf::Closure *) {
-    // // 协程方案, 不允许在主协程中call Rpc
-    // auto coro = g_rpcCoroMgr->GetCurCoro();
-    // if (coro->IsMainCoro())
-    // {
-    //     LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Main coro not allow call Yield() method!");
-    //     return;
-    // }
+// 协程方案, 不允许在主协程中call Rpc
+#ifdef UseCoroRpc
+    auto coro = g_rpcCoroMgr->GetCurCoro();
+    if (coro->IsMainCoro()) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Main coro not allow call Yield() method!");
+        return;
+    }
+#endif
 
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CallMethod!");
     LLBC_Packet *sendPacket = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
@@ -37,34 +38,45 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
     sendPacket->Write(method->name());
     sendPacket->Write(*request);
 
-    // // 协程方案，填充原始协程id
-    // sendPacket->SetExtData1(g_rpcCoroMgr->GetCurCoroId())
+// // 协程方案，需填充原始协程id
+#ifdef UseCoroRpc
+    sendPacket->SetExtData1(g_rpcCoroMgr->GetCurCoroId());
+#endif
 
     connMgr_->PushPacket(sendPacket);
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Waiting!");
 
-    // // // 协程方案
-    // {
-    //     coro->Yield(); // yield该协程，直到收到回包
-    //     // 协程被唤醒时，从协程获取接收到的包
-    //     LLBC_Packet *recvPacket = reinterpret_cast<LLBC_Packet *>(coro->GetPtrParam1());
-    //     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%d):%s", recvPacket->GetPayloadLength(),
-    //     recvPacket->GetPayload()); recvPacket->Read(*response); LLBC_Recycle(recvPacket); LLOG(nullptr, nullptr,
-    //     LLBC_LogLevel::Trace, "Recved: %s", response->DebugString().c_str());
-    // }
+// 协程方案
+#ifdef UseCoroRpc
+    coro->Yield();  // yield当前协程，直到收到回包
+    // 协程被唤醒时，从协程获取接收到的回包
+    LLBC_Packet *recvPacket = reinterpret_cast<LLBC_Packet *>(coro->GetPtrParam1());
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%d):%s", recvPacket->GetPayloadLength(),
+         recvPacket->GetPayload());
+    recvPacket->Read(*response);
+    // LLBC_Recycle(recvPacket);
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s", response->DebugString().c_str());
 
-    // 直接等待回包方案
-    {
-        auto recvPacket = connMgr_->PopPacket();
-        while (!recvPacket) {
-            LLBC_Sleep(1);
-            recvPacket = connMgr_->PopPacket();
-        }
-
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%d):%s", recvPacket->GetPayloadLength(),
-             recvPacket->GetPayload());
-        recvPacket->Read(*response);
-        LLBC_Recycle(recvPacket);
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s", response->DebugString().c_str());
+#else
+    // 直接等待暴力回包方案, 100ms超时
+    auto recvPacket = connMgr_->PopPacket();
+    int count = 0;
+    while (!recvPacket && count < 100) {
+        LLBC_Sleep(1);
+        count++;
+        recvPacket = connMgr_->PopPacket();
     }
+
+    if (!recvPacket) {
+        response->Clear();
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "RecvPacket timeout!");
+        return;
+    }
+
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%d):%s", recvPacket->GetPayloadLength(),
+         recvPacket->GetPayload());
+    recvPacket->Read(*response);
+    LLBC_Recycle(recvPacket);
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s", response->DebugString().c_str());
+#endif
 }
