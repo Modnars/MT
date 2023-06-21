@@ -5,3 +5,13 @@ build/
 # clangd index. (".clangd" is a config file now, thus trailing slash)
 .clangd/
 .cache
+*.pb.cc
+*.pb.h
+*.o
+*.log
+*.cmake
+rpc/rpc-demo/CMakeFiles
+rpc/rpc-demo/CMakeCache.txt
+rpc/rpc-demo/Makefile
+rpc/rpc-demo/server
+rpc/rpc-demo/client

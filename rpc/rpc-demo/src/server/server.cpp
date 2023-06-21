@@ -43,6 +43,7 @@ int main()
     if (ret == LLBC_FAILED)
     {
         std::cout << "Initialize logger failed, error: " << LLBC_FormatLastError() << std::endl;
+        return -1;
     }
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Hello Server!");
 
