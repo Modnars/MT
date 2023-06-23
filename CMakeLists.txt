@@ -59,8 +59,3 @@ target_link_libraries(${TARGET_NAME} PUBLIC fmt::fmt)
 add_subdirectory(test)
 add_subdirectory(3rd)
 add_subdirectory(rpc)
-
-set(MODELS_CMAKE_FILES
-    "cmake/mtConfig.cmake"
-    "cmake/mtConfigVersion.cmake"
-)
