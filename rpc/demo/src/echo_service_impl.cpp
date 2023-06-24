@@ -8,10 +8,12 @@
  */
 #include "echo_service_impl.h"
 #include "llbc.h"
+
 using namespace llbc;
-void MyEchoService::Echo(::google::protobuf::RpcController * /* controller */, const ::echo::EchoRequest *request,
-                         ::echo::EchoResponse *response, ::google::protobuf::Closure *done) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "received, msg:%s", request->msg().c_str());
-    response->set_msg(std::string("I have received '") + request->msg() + std::string("'"));
+
+void DemoServiceImpl::Echo(::google::protobuf::RpcController * /* controller */, const ::protocol::EchoReq *req,
+                           ::protocol::EchoRsp *rsp, ::google::protobuf::Closure *done) {
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "received, msg:%s", req->msg().c_str());
+    rsp->set_msg(std::string("I have received '") + req->msg() + std::string("'"));
     done->Run();
 }

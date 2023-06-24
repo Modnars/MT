@@ -38,7 +38,7 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
     sendPacket->Write(method->name());
     sendPacket->Write(*request);
 
-// // 协程方案，需填充原始协程id
+// 协程方案，需填充原始协程 id
 #ifdef UseCoroRpc
     sendPacket->SetExtData1(g_rpcCoroMgr->GetCurCoroId());
 #endif

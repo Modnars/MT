@@ -1,8 +1,11 @@
 #include <csignal>
-#include <iostream>
-#include "conn_mgr.h"
-#include "echo.pb.h"
+
+#include <fmt/core.h>
+#include "common/demo.pb.h"
 #include "llbc.h"
+
+#include "common/demo_service.pb.h"
+#include "conn_mgr.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
@@ -12,7 +15,7 @@ using namespace llbc;
 bool stop = false;
 
 void signalHandler(int signum) {
-    std::cout << "Interrupt signal (" << signum << ") received.\n";
+    fmt::print("INTERRUPT SIGNAL [{}] RECEIVED.\n", signum);
     stop = true;
 }
 
@@ -20,7 +23,7 @@ int main() {
     // 注册信号 SIGINT 和信号处理程序
     signal(SIGINT, signalHandler);
 
-    // 初始化llbc库
+    // 初始化 llbc 库
     LLBC_Startup();
     LLBC_Defer(LLBC_Cleanup());
 
@@ -45,7 +48,7 @@ int main() {
     //     return -1;
     // }
 
-    // 创建rpc channel
+    // 创建 rpc channel
     RpcChannel *channel = connMgr->CreateRpcChannel("127.0.0.1", 6688);
     LLBC_Defer(delete channel);
 
@@ -56,14 +59,14 @@ int main() {
 
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Client Start!");
 
-    // 创建rpc req & resp
-    echo::EchoRequest req;
-    echo::EchoResponse rsp;
+    // 创建 rpc req & resp
+    protocol::EchoReq req;
+    protocol::EchoRsp rsp;
     req.set_msg("hello, myrpc.");
 
-    // 创建rpc controller & stub
+    // 创建 rpc controller & stub
     MyController cntl;
-    echo::EchoService_Stub stub(channel);
+    protocol::DemoService_Stub stub(channel);
 
 #ifdef UseCoroRpc
     // 协程方案, 在新协程中call rpc
@@ -82,7 +85,6 @@ int main() {
     // 直接调用方案
     while (!stop) {
         stub.Echo(&cntl, &req, &rsp, nullptr);
-        // std::cout << "resp:" << response.msg() << std::endl;
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv rsp:%s", rsp.msg().c_str());
         LLBC_Sleep(1000);
     }

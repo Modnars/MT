@@ -9,13 +9,13 @@
 #pragma once
 
 #include <map>
+
 #include "google/protobuf/message.h"
 #include "google/protobuf/service.h"
 #include "google/protobuf/stubs/common.h"
 
-namespace llbc
-{
-    class LLBC_Packet;
+namespace llbc {
+class LLBC_Packet;
 }
 
 class ConnMgr;

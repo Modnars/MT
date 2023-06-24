@@ -10,6 +10,7 @@
 #pragma once
 
 #include "llbc.h"
+
 using namespace llbc;
 
 class RpcChannel;
@@ -19,7 +20,7 @@ enum RpcOpCode {
     RpcRsp = 2,
 };
 
-// 简单双线程无锁循环队列, 只提供两个方法, Push和Pop分别只能由一个线程调用
+// 简单双线程无锁循环队列, 只提供两个方法, Push 和 Pop 分别只能由一个线程调用
 template <typename T, int QueueCapacity>
 class LockFreeQueue {
 public:
@@ -42,12 +43,12 @@ bool LockFreeQueue<T, QueueCapacity>::Push(T *val) {
     if (size < 0)
         size += QueueCapacity;
 
-    // 队列已满（还剩1个位置就算满了）
+    // 队列已满（还剩 1 个位置就算满了）
     if (QueueCapacity - size == 1)
         return false;
 
     queue_[wtIdx_] = val;
-    // 写内存barrier, 防止乱序执行导致queue_[wtIdx_] 值未完全写入，后台线程就开始处理了
+    // 写内存 barrier, 防止乱序执行导致 queue_[wtIdx_] 值未完全写入，后台线程就开始处理了
     __asm__ __volatile__("sfence" ::: "memory");
     wtIdx_ = (wtIdx_ + 1) % QueueCapacity;
     return true;

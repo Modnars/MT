@@ -1,0 +1,9 @@
+package protocol;
+
+import "demo.proto";
+
+option cc_generic_services = true;
+
+service DemoService {
+    rpc Echo(EchoReq) returns (EchoRsp);
+}

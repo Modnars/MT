@@ -13,14 +13,16 @@ link_directories(
 # 生成协议 proto 的 .pb.h 和 .pb.cc 文件
 set(PROTOC_TOOL ${3RD_DIR}/protobuf-2.6.1/bin/protoc)  # 其他平台构建时需要修改 PROTOC 路径
 set(PROTOCOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protocol")
-file(GLOB protocol_file_list ${PROTOCOL_DIR}/*.proto)
+set(PROTOCOL_COMMON_DIR "${PROTOCOL_DIR}/common")
+set(PROTOCOL_INNER_DIR "${PROTOCOL_DIR}/inner")
+file(GLOB protocol_file_list ${PROTOCOL_COMMON_DIR}/*.proto ${PROTOCOL_INNER_DIR}/*.proto)
 foreach(_file ${protocol_file_list})
     string(REPLACE ".proto" ".pb.h" file_h ${_file})
     string(REPLACE ".proto" ".pb.cc" file_cc ${_file})
 	get_filename_component(_dir ${_file} DIRECTORY)
     add_custom_command(
             OUTPUT ${file_cc} ${file_h}
-            COMMAND ${PROTOC_TOOL} --cpp_out=${_dir} --proto_path=${PROTOCOL_DIR} ${_file}
+            COMMAND ${PROTOC_TOOL} --cpp_out=${_dir} --proto_path=${PROTOCOL_COMMON_DIR}:${PROTOCOL_INNER_DIR} ${_file}
             DEPENDS ${_file} 
             COMMENT "Generating protobuf files for ${_file}"
     )
@@ -36,6 +38,6 @@ file(GLOB SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 # add_library(myrpc ${LIBMYRPC_SRC})
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 add_executable(client ${PB_FILES} ${SRC_FILES} ./src/client/client.cpp)
-target_link_libraries(client libprotobuf.a libllbc.so)
+target_link_libraries(client libprotobuf.a libllbc.so fmt::fmt)
 add_executable(server ${PB_FILES} ${SRC_FILES} ./src/server/server.cpp)
-target_link_libraries(server libprotobuf.a libllbc.so)
+target_link_libraries(server libprotobuf.a libllbc.so fmt::fmt)

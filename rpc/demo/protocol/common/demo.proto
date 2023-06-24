@@ -1,17 +1,12 @@
-package echo;
+package protocol;
 
 option cc_generic_services = true;
 
-message EchoRequest {
+message EchoReq {
     required string msg = 1;
 }
-
-message EchoResponse {
-    required string msg = 2;
-}
-
-service EchoService {
-    rpc Echo(EchoRequest) returns (EchoResponse);
+message EchoRsp {
+    required string msg = 1;
 }
 
 message A {

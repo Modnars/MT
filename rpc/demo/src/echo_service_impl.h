@@ -7,11 +7,12 @@
  * @brief:
  */
 #pragma once
-#include "echo.pb.h"
 
-class MyEchoService : public echo::EchoService {
+#include "common/demo_service.pb.h"
+
+class DemoServiceImpl : public protocol::DemoService {
 public:
-    void Echo(::google::protobuf::RpcController *controller, const ::echo::EchoRequest *request,
-              ::echo::EchoResponse *response, ::google::protobuf::Closure *done) override;
+    void Echo(::google::protobuf::RpcController *controller, const ::protocol::EchoReq *req, ::protocol::EchoRsp *rsp,
+              ::google::protobuf::Closure *done) override;
 
 };  // MyEchoService
