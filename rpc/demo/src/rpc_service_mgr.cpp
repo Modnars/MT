@@ -44,10 +44,14 @@ void RpcServiceMgr::AddService(::google::protobuf::Service *service) {
 void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcReq");
     // 读取 serviceName & methodName
-    std::string serviceName;
-    std::string methodName;
-    packet.Read(serviceName);
-    packet.Read(methodName);
+    std::string serviceName, methodName;
+    if( packet.Read(serviceName) != LLBC_OK ||
+        packet.Read(methodName) != LLBC_OK ||
+        packet.Read(peer_task_id_) != LLBC_OK) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "read packet failed");
+        return;
+    }
+    
     auto *service = _services[serviceName].service;
     auto *method = _services[serviceName].mds[methodName];
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv service_name: %s", serviceName.c_str());
@@ -65,7 +69,6 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 
     auto *rsp = service->GetResponsePrototype(method).New();
     sessionId_ = packet.GetSessionId();
-    peer_task_id_ = packet.GetExtData1();
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "get task id: %lu", peer_task_id_);
 
 #if ENABLE_CXX20_COROUTINE
@@ -88,10 +91,10 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 
 void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
 #if ENABLE_CXX20_COROUTINE
-    // fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
-    //            "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "[HANDLE_RPC_REQ] THIS IS A COROUTINE CALL FROM C++20\n");
-    // auto dstCoroId = packet.GetExtData1();
+    fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
+               "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
+    // uint64 dstCoroId = 0
+    // packet.Read(dstCoroId);
     // Coro *coro = g_rpcCoroMgr->GetCoro(dstCoroId);
     // if (!coro) {
     //     LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "coro not found, coroId:%d", dstCoroId);
@@ -115,11 +118,11 @@ packet->SetOpcode(RpcOpCode::RpcRsp);
     // auto sessionId = coro->GetParam1();
     // auto srcCoroId = coro->GetParam2();
     packet->SetSessionId(sessionId_);
-    packet->SetExtData1(peer_task_id_);
+    packet->Write(static_cast<uint64>(peer_task_id_));
 #else
     // 直接调用方案
     packet->SetSessionId(sessionId_);
-    packet->SetExtData1(0);
+    packet->Write(uint64(555));
 #endif
 
     packet->Write(*rsp);

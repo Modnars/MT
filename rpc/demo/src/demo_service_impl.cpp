@@ -25,16 +25,17 @@ void DemoServiceImpl::Echo(::google::protobuf::RpcController * /* controller */,
         RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6699);
         if (!channel) {
             LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CreateRpcChannel Fail");
+            // rsp->set_msg("CreateRpcChannel Fail");
             return;
         }
 
         // 内部 rpc 调用
         protocol::DemoService_Stub stub(channel);
         stub.Echo(&RpcController::GetInst(), &innerReq, &innerRsp, nullptr);
+        delete channel;
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "RECEIVED inner RSP: %s", innerRsp.msg().c_str());
 
         rsp->set_msg(std::string("FIX: ") + innerRsp.msg());
-        delete channel;
         return;
     }
 

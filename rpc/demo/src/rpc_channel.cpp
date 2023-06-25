@@ -28,15 +28,17 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
     sendPacket->SetSessionId(sessionId_);
     sendPacket->Write(method->service()->name());
     sendPacket->Write(method->name());
-    sendPacket->Write(*request);
 
 // 协程方案，需填充原始协程 id
 #ifdef ENABLE_CXX20_COROUTINE
     auto task_id = RpcController::GetInst().GetID();
-    sendPacket->SetExtData1(task_id);
+    sendPacket->Write(task_id);
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "set extdata: %lu", task_id);
+#else
+    sendPacket->Write(uint64(666));
 #endif
 
+    sendPacket->Write(*request);
     connMgr_->PushPacket(sendPacket);
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Waiting!");
 
@@ -70,8 +72,14 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
 
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%lu):%s", recvPacket->GetPayloadLength(),
          reinterpret_cast<const char *>(recvPacket->GetPayload()));
-    recvPacket->Read(*response);
+    uint64 srcCoroId;
+    if (recvPacket->Read(srcCoroId) != LLBC_OK
+        || recvPacket->Read(*response) != LLBC_OK) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read recvPacket fail");
+        return;
+    }
+
     LLBC_Recycle(recvPacket);
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s, extdata: %lu", response->DebugString().c_str(), recvPacket->GetExtData1());
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s, extdata: %lu", response->DebugString().c_str(), srcCoroId);
 #endif
 }
