@@ -11,8 +11,6 @@
 
 #include "llbc.h"
 
-// #define UseCoroRpc
-
 class BaseRpcCoroMgr;
 class Coro {
     LLBC_DISABLE_ASSIGNMENT(Coro);

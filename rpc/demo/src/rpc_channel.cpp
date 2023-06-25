@@ -10,6 +10,7 @@
 #include "conn_mgr.h"
 #include "llbc.h"
 #include "rpc_coro_mgr.h"
+#include <mt/runner.h>
 
 using namespace llbc;
 
@@ -18,18 +19,9 @@ RpcChannel::~RpcChannel() {
 }
 
 void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
-                            ::google::protobuf::RpcController * /* controller */,
+                            ::google::protobuf::RpcController *controller,
                             const ::google::protobuf::Message *request, ::google::protobuf::Message *response,
                             ::google::protobuf::Closure *) {
-// 协程方案, 不允许在主协程中 call Rpc
-#ifdef UseCoroRpc
-    auto coro = g_rpcCoroMgr->GetCurCoro();
-    if (coro->IsMainCoro()) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Main coro not allow call Yield() method!");
-        return;
-    }
-#endif
-
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CallMethod!");
     LLBC_Packet *sendPacket = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
     sendPacket->SetHeader(0, RpcOpCode::RpcReq, 0);
@@ -39,24 +31,27 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
     sendPacket->Write(*request);
 
 // 协程方案，需填充原始协程 id
-#ifdef UseCoroRpc
-    sendPacket->SetExtData1(g_rpcCoroMgr->GetCurCoroId());
+#ifdef ENABLE_CXX20_COROUTINE
+    auto task_id = RpcController::GetInst().GetID();
+    sendPacket->SetExtData1(task_id);
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "set extdata: %lu", task_id);
 #endif
 
     connMgr_->PushPacket(sendPacket);
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Waiting!");
 
-// 协程方案
-#ifdef UseCoroRpc
-    coro->Yield();  // yield当前协程，直到收到回包
-    // 协程被唤醒时，从协程获取接收到的回包
-    LLBC_Packet *recvPacket = reinterpret_cast<LLBC_Packet *>(coro->GetPtrParam1());
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%d):%s", recvPacket->GetPayloadLength(),
-         recvPacket->GetPayload());
-    recvPacket->Read(*response);
-    // LLBC_Recycle(recvPacket);
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s", response->DebugString().c_str());
+    // respone为空时直接返回，不等回包
+    if(!response){
+        return;
+    }
 
+// 协程方案
+#ifndef ENABLE_CXX20_COROUTINE
+    auto func = [&controller, &response](void *) -> mt::Task<> {
+            // 处理rsp
+            co_return;
+        };
+    mt::run(func(nullptr));
 #else
     // 直接等待暴力回包方案, 100ms超时
     auto recvPacket = connMgr_->PopPacket();
@@ -77,6 +72,6 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
          reinterpret_cast<const char *>(recvPacket->GetPayload()));
     recvPacket->Read(*response);
     LLBC_Recycle(recvPacket);
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s", response->DebugString().c_str());
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s, extdata: %lu", response->DebugString().c_str(), recvPacket->GetExtData1());
 #endif
 }

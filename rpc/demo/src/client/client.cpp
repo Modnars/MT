@@ -62,14 +62,18 @@ int main() {
     // 创建 rpc controller & stub
     protocol::DemoService_Stub stub(channel);
 
-#ifdef UseCoroRpc
+#ifndef ENABLE_CXX20_COROUTINE
     // 协程方案, 在新协程中call rpc
     RpcServiceMgr serviceMgr(connMgr);
     while (!stop) {
         // 创建协程并Resume
-        auto func = [&stub, &cntl, &channel, &req, &rsp](void *) { stub.Echo(&cntl, &req, &rsp, nullptr); };
-        auto coro = g_rpcCoroMgr->CreateCoro(func, nullptr, "");
-        coro->Resume();
+        auto func = [&stub, &cntl, &channel, &req, &rsp](void *) -> mt::Task<> {
+            stub.Echo(&cntl, &req, &rsp, nullptr);
+            co_yield 0;
+            // 处理rsp
+            co_return;
+        };
+        mt::run(func(nullptr));
 
         // 处理服务收到的数据包，若有Rpc Rsp，OnUpdate内部会唤醒对应休眠的协程
         connMgr->Tick();

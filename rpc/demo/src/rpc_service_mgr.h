@@ -46,4 +46,5 @@ private:
     int sessionId_ = 0;
     int serviceId_ = 0;
     bool stop_ = false;
+    uint64_t peer_task_id_ = 0;
 };  // RpcServiceMgr

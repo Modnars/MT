@@ -6,7 +6,6 @@
  * @edit: regangcli
  * @brief:
  */
-#define ENABLE_CXX20_COROUTINE 1
 
 #include <fmt/color.h>
 #include "llbc.h"
@@ -65,6 +64,9 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     }  
 
     auto *rsp = service->GetResponsePrototype(method).New();
+    sessionId_ = packet.GetSessionId();
+    peer_task_id_ = packet.GetExtData1();
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "get task id: %lu", peer_task_id_);
 
 #if ENABLE_CXX20_COROUTINE
     auto func = [&packet, service, method, req, rsp, this](void *) -> mt::Task<> {
@@ -78,7 +80,6 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     mt::run(func(nullptr));
 #else
     // 直接调用方案
-    sessionId_ = packet.GetSessionId();
     // 创建 rpc 完成回调函数
     service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
     OnRpcDone(req, rsp);
@@ -87,8 +88,9 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 
 void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
 #if ENABLE_CXX20_COROUTINE
-    fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
-               "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
+    // fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
+    //            "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "[HANDLE_RPC_REQ] THIS IS A COROUTINE CALL FROM C++20\n");
     // auto dstCoroId = packet.GetExtData1();
     // Coro *coro = g_rpcCoroMgr->GetCoro(dstCoroId);
     // if (!coro) {
@@ -105,22 +107,18 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
 void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protobuf::Message *rsp) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRpcDone, req: %s, rsp: %s", req->DebugString().c_str(),
          rsp->DebugString().c_str());
-
-#ifdef UseCoroRpc
+auto packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
+packet->SetOpcode(RpcOpCode::RpcRsp);
+#ifdef ENABLE_CXX20_COROUTINE
     // 协程方案
-    auto coro = g_rpcCoroMgr->GetCurCoro();
-    auto sessionId = coro->GetParam1();
-    auto srcCoroId = coro->GetParam2();
-    auto packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
-    packet->SetSessionId(sessionId);
-    packet->SetOpcode(RpcOpCode::RpcRsp);
-    packet->SetExtData1(srcCoroId);
-
+    // auto coro = g_rpcCoroMgr->GetCurCoro();
+    // auto sessionId = coro->GetParam1();
+    // auto srcCoroId = coro->GetParam2();
+    packet->SetSessionId(sessionId_);
+    packet->SetExtData1(peer_task_id_);
 #else
     // 直接调用方案
-    auto packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
     packet->SetSessionId(sessionId_);
-    packet->SetOpcode(RpcOpCode::RpcRsp);
     packet->SetExtData1(0);
 #endif
 
