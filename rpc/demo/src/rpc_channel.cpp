@@ -21,7 +21,7 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
                             ::google::protobuf::RpcController * /* controller */,
                             const ::google::protobuf::Message *request, ::google::protobuf::Message *response,
                             ::google::protobuf::Closure *) {
-// 协程方案, 不允许在主协程中call Rpc
+// 协程方案, 不允许在主协程中 call Rpc
 #ifdef UseCoroRpc
     auto coro = g_rpcCoroMgr->GetCurCoro();
     if (coro->IsMainCoro()) {
@@ -73,8 +73,8 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
         return;
     }
 
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%d):%s", recvPacket->GetPayloadLength(),
-         recvPacket->GetPayload());
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%lu):%s", recvPacket->GetPayloadLength(),
+         reinterpret_cast<const char *>(recvPacket->GetPayload()));
     recvPacket->Read(*response);
     LLBC_Recycle(recvPacket);
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s", response->DebugString().c_str());

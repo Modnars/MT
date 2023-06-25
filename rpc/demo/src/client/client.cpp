@@ -1,4 +1,5 @@
 #include <csignal>
+#include <iostream>
 
 #include <fmt/core.h>
 #include "common/demo.pb.h"
@@ -41,12 +42,6 @@ int main() {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Initialize connMgr failed, error:%s", LLBC_FormatLastError());
         return -1;
     }
-    // if (connMgr->StartRpcService("127.0.0.1", 6688) == LLBC_FAILED)
-    // {
-
-    //     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "connMgr Init Fail");
-    //     return -1;
-    // }
 
     // 创建 rpc channel
     RpcChannel *channel = connMgr->CreateRpcChannel("127.0.0.1", 6688);
@@ -65,7 +60,6 @@ int main() {
     req.set_msg("hello, myrpc.");
 
     // 创建 rpc controller & stub
-    MyController cntl;
     protocol::DemoService_Stub stub(channel);
 
 #ifdef UseCoroRpc
@@ -84,9 +78,13 @@ int main() {
 #else
     // 直接调用方案
     while (!stop) {
-        stub.Echo(&cntl, &req, &rsp, nullptr);
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv rsp:%s", rsp.msg().c_str());
-        LLBC_Sleep(1000);
+        std::string input;
+        std::cin >> input;  // 手动阻塞
+        if (input != "\n")
+            req.set_msg(input.c_str());
+        stub.Echo(&RpcController::GetInst(), &req, &rsp, nullptr);
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "RECEIVED RSP: %s", rsp.msg().c_str());
+        // LLBC_Sleep(1000);
     }
 #endif
 

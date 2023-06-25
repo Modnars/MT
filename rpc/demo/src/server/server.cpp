@@ -4,7 +4,8 @@
 #include "llbc.h"
 
 #include "conn_mgr.h"
-#include "echo_service_impl.h"
+#include "demo_service_impl.h"
+#include "llbc/core/log/LogLevel.h"
 #include "rpc_channel.h"
 #include "rpc_service_mgr.h"
 
@@ -38,12 +39,25 @@ int main() {
 
     // 启动 rpc 服务
     if (connMgr->StartRpcService("127.0.0.1", 6688) != LLBC_OK) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "connMgr StartRpcService Fail");
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "connMgr StartRpcService Failed");
         return -1;
     }
 
     RpcServiceMgr serviceMgr(connMgr);
     serviceMgr.AddService(new DemoServiceImpl);
+
+    RpcChannel *channel = connMgr->CreateRpcChannel("127.0.0.1", 6688);
+    LLBC_Defer(delete channel);
+    if (!channel) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "CreateRpcChannel Failed");
+        return -1;
+    }
+    protocol::DemoService_Stub stub{channel};
+    bool succ = DemoServiceHelper::GetInst().Init(&stub);
+    if (!succ) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Init ServiceHelper failed");
+        return -1;
+    }
 
     // 死循环处理 rpc 请求
     while (!stop) {

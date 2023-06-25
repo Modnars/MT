@@ -21,32 +21,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(MT_INCLUDE
-        include/mt/concept/awaitable.h
-        include/mt/concept/future.h
-        include/mt/concept/promise.h
-        include/mt/concept/schedulable.h
-        include/mt/net/addrinfo_guard.h
-        include/mt/net/connect.h
-        include/mt/net/server.h
-        include/mt/net/stream.h
-        include/mt/selector/event.h
-        include/mt/selector/selector_epoll.h
-        include/mt/selector/selector_kqueue.h
-        include/mt/selector/selector.h
-        include/mt/util/macros.h
-        include/mt/util/noncopyable.h
-        include/mt/call_stack.h
-        include/mt/event_loop.h
-        include/mt/exception.h
-        include/mt/gather.h
-        include/mt/handle.h
-        include/mt/result.h
-        include/mt/sleep.h
-        include/mt/task.h
-        include/mt/void_value.h
-        include/mt/wait_for.h
-        )
+file(GLOB_RECURSE MT_INCLUDE include/*.h)
 set(3RD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rd")
 
 include_directories(${CMAKE_SOURCE_DIR}/include)

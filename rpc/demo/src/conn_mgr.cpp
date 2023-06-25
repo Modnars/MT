@@ -44,7 +44,7 @@ void ConnComp::OnProtoReport(const LLBC_ProtoReport &report) {
 void ConnComp::OnUpdate() {
     auto *sendPacket = sendQueue_.Pop();
     while (sendPacket) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "sendPacket:%s", sendPacket->ToString().c_str());
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "sendPacket: %s", sendPacket->ToString().c_str());
         auto ret = GetService()->Send(sendPacket);
         if (ret != LLBC_OK) {
             LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Send packet failed, err: %s", LLBC_FormatLastError());

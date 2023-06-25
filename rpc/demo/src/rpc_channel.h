@@ -10,11 +10,22 @@
 #pragma once
 
 #include <google/protobuf/message.h>
-#include "google/protobuf/service.h"
-#include "google/protobuf/stubs/common.h"
+#include <google/protobuf/service.h>
+#include <google/protobuf/stubs/common.h>
+#include <mt/util/singleton.h>
 
 class ConnMgr;
 class MyController : public ::google::protobuf::RpcController {
+public:
+    virtual void Reset() { }
+    virtual bool Failed() const { return false; }
+    virtual std::string ErrorText() const { return ""; }
+    virtual void StartCancel() { }
+    virtual void SetFailed(const std::string & /* reason */) { }
+    virtual bool IsCanceled() const { return false; }
+    virtual void NotifyOnCancel(::google::protobuf::Closure * /* callback */) { }
+};
+class RpcController : public ::google::protobuf::RpcController, public mt::Singleton<RpcController> {
 public:
     virtual void Reset() { }
     virtual bool Failed() const { return false; }
