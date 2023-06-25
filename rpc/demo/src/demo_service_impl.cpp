@@ -34,11 +34,9 @@ void DemoServiceImpl::Echo(::google::protobuf::RpcController * /* controller */,
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "RECEIVED inner RSP: %s", innerRsp.msg().c_str());
 
         rsp->set_msg(std::string("FIX: ") + innerRsp.msg());
-        done->Run();
         delete channel;
         return;
     }
 
     rsp->set_msg(std::string("OK: ") + req->msg());
-    done->Run();
 }

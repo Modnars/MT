@@ -71,9 +71,8 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
         fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
                    "[HANDLE_RPC_REQ] THIS IS A COROUTINE CALL FROM C++20\n");
         this->sessionId_ = packet.GetSessionId();
-        auto done = ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone, req, rsp);
-        service->CallMethod(method, &RpcController::GetInst(), req, rsp, done);
-        // OnRpcDone(req, rsp);
+        service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
+        OnRpcDone(req, rsp);
         co_return;
     };
     mt::run(func(nullptr));
@@ -81,9 +80,8 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     // 直接调用方案
     sessionId_ = packet.GetSessionId();
     // 创建 rpc 完成回调函数
-    auto done = ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone, req, rsp);
-    service->CallMethod(method, &RpcController::GetInst(), req, rsp, done);
-    // OnRpcDone(req, rsp);
+    service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
+    OnRpcDone(req, rsp);
 #endif
 }
 
