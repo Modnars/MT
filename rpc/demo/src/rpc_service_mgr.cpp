@@ -90,11 +90,16 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 }
 
 void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
-#if ENABLE_CXX20_COROUTINE
-    fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
-               "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
-    // uint64 dstCoroId = 0
-    // packet.Read(dstCoroId);
+#ifdef ENABLE_CXX20_COROUTINE
+    // fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
+    //            "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
+    auto task_id = packet.GetExtData1();
+    auto task = RpcController::GetInst().GetTaskbyID(task_id);
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "[HANDLE_RPC_RSP] : %lu\n", task_id);
+    if(task){
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20, task resume: %lu", task_id);
+        task->schedule();
+    }
     // Coro *coro = g_rpcCoroMgr->GetCoro(dstCoroId);
     // if (!coro) {
     //     LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "coro not found, coroId:%d", dstCoroId);

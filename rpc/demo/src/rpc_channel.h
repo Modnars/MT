@@ -37,6 +37,13 @@ public:
     virtual bool IsCanceled() const { return false; }
     virtual void NotifyOnCancel(::google::protobuf::Closure * /* callback */) { }
     uint64_t GetID() { return ++task_generate_id_; }
+    mt::Task<>* GetTaskbyID(uint64_t id) { 
+        auto it = id_to_task_map_.find(id);
+        if( it != id_to_task_map_.end() ) { 
+            return  &it->second;
+        }
+        return nullptr;
+    }
 private:
     uint64_t task_generate_id_;
     std::map<uint64_t /* task_id_ */, mt::Task<> /* task_ */> id_to_task_map_;
