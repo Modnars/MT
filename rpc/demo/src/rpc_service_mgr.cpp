@@ -43,6 +43,7 @@ void RpcServiceMgr::AddService(::google::protobuf::Service *service) {
 }
 
 void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcReq");
     // 读取 serviceName & methodName
     std::string serviceName;
     std::string methodName;
@@ -57,7 +58,12 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 
     // 解析 req & 创建 rsp
     auto *req = service->GetRequestPrototype(method).New();
-    packet.Read(*req);
+    auto ret = packet.Read(*req);
+    if (ret != LLBC_OK) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read req failed, ret: %d", ret);
+        return;
+    }  
+
     auto *rsp = service->GetResponsePrototype(method).New();
 
 #if ENABLE_CXX20_COROUTINE
@@ -67,16 +73,17 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
         this->sessionId_ = packet.GetSessionId();
         auto done = ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone, req, rsp);
         service->CallMethod(method, &RpcController::GetInst(), req, rsp, done);
+        // OnRpcDone(req, rsp);
         co_return;
     };
     mt::run(func(nullptr));
 #else
     // 直接调用方案
     sessionId_ = packet.GetSessionId();
-
     // 创建 rpc 完成回调函数
     auto done = ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone, req, rsp);
     service->CallMethod(method, &RpcController::GetInst(), req, rsp, done);
+    // OnRpcDone(req, rsp);
 #endif
 }
 

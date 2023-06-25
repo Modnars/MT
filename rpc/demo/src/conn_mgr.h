@@ -10,6 +10,7 @@
 #pragma once
 
 #include "llbc.h"
+#include <mt/util/singleton.h>
 
 using namespace llbc;
 
@@ -112,7 +113,7 @@ private:
 };
 
 // 连接管理器
-class ConnMgr {
+class ConnMgr : public mt::Singleton<ConnMgr> {
 public:
     ConnMgr();
     virtual ~ConnMgr();

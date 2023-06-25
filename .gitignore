@@ -17,3 +17,5 @@ rpc/demo/CMakeCache.txt
 rpc/demo/Makefile
 rpc/demo/server
 rpc/demo/client
+rpc/demo/server2
+rpc/demo/core*

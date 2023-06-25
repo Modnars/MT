@@ -38,14 +38,14 @@ int main() {
     connMgr->Init();
 
     // 启动 rpc 服务
-    if (connMgr->StartRpcService("127.0.0.1", 6688) != LLBC_OK) {
+    if (connMgr->StartRpcService("127.0.0.1", 6699) != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "connMgr StartRpcService Failed");
         return -1;
     }
 
     RpcServiceMgr serviceMgr(connMgr);
     serviceMgr.AddService(new DemoServiceImpl);
-    
+
     // 死循环处理 rpc 请求
     while (!stop) {
         connMgr->Tick();
