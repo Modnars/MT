@@ -44,10 +44,11 @@ public:
         }
         return nullptr;
     }
+    ::google::protobuf::Message* GetRsp() { return rsp_; }
 private:
     uint64_t task_generate_id_;
     std::map<uint64_t /* task_id_ */, mt::Task<> /* task_ */> id_to_task_map_;
-    ::google::protobuf::Message *rsp_;
+    ::google::protobuf::Message* rsp_;
 };
 
 class RpcChannel : public ::google::protobuf::RpcChannel {

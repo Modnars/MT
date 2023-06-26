@@ -41,43 +41,45 @@ void RpcServiceMgr::AddService(::google::protobuf::Service *service) {
     _services[service_info.sd->name()] = service_info;
 }
 
-void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcReq");
-    // 读取 serviceName & methodName
-    std::string serviceName, methodName;
+int32_t RpcServiceMgr::PreHandlePacket(LLBC_Packet &packet, std::string& serviceName, std::string& methodName, uint64_t& task_id) {
     if( packet.Read(serviceName) != LLBC_OK ||
         packet.Read(methodName) != LLBC_OK ||
-        packet.Read(peer_task_id_) != LLBC_OK) {
+        packet.Read(task_id) != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "read packet failed");
-        return;
+        return -1;
     }
-    
-    auto *service = _services[serviceName].service;
-    auto *method = _services[serviceName].mds[methodName];
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv service_name: %s", serviceName.c_str());
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv method_name: %s", methodName.c_str());
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "req type: %s", method->input_type()->name().c_str());
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "rsp type: %s", method->output_type()->name().c_str());
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "get task id: %lu", task_id);
+    sessionId_ = packet.GetSessionId();
+    return 0;
+}
 
+void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcReq");
+    std::string serviceName, methodName;
+    uint64_t task_id;
+    if(PreHandlePacket(packet, serviceName, methodName, task_id) != 0) {
+        return;
+    }
+
+    auto *service = _services[serviceName].service;
+    auto *method = _services[serviceName].mds[methodName];
     // 解析 req & 创建 rsp
     auto *req = service->GetRequestPrototype(method).New();
+    auto *rsp = service->GetResponsePrototype(method).New();
     auto ret = packet.Read(*req);
     if (ret != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read req failed, ret: %d", ret);
         return;
     }  
 
-    auto *rsp = service->GetResponsePrototype(method).New();
-    sessionId_ = packet.GetSessionId();
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "get task id: %lu", peer_task_id_);
-
 #if ENABLE_CXX20_COROUTINE
-    auto func = [&packet, service, method, req, rsp, this](void *) -> mt::Task<> {
+    auto func = [&packet, service, method, req, rsp, task_id, this](void *) -> mt::Task<> {
         fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
                    "[HANDLE_RPC_REQ] THIS IS A COROUTINE CALL FROM C++20\n");
-        this->sessionId_ = packet.GetSessionId();
         service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
-        OnRpcDone(req, rsp);
+        OnRpcDone(req, rsp, method, task_id);
         co_return;
     };
     mt::run(func(nullptr));
@@ -93,37 +95,47 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
 #ifdef ENABLE_CXX20_COROUTINE
     // fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
     //            "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
-    auto task_id = packet.GetExtData1();
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcRsp");
+    std::string serviceName, methodName;
+    uint64_t task_id;
+    if(PreHandlePacket(packet, serviceName, methodName, task_id) != 0) {
+        return;
+    }
+
+    auto *service = _services[serviceName].service;
+    auto *method = _services[serviceName].mds[methodName];
+    // 解析 rsp
+    auto *rsp = RpcController::GetInst().GetRsp();
+    rsp = service->GetResponsePrototype(method).New();
+    auto ret = packet.Read(*rsp);
+    if (ret != LLBC_OK) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read rsp failed, ret: %d", ret);
+        return;
+    }  
+
+    // 唤醒 task
     auto task = RpcController::GetInst().GetTaskbyID(task_id);
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "[HANDLE_RPC_RSP] : %lu\n", task_id);
     if(task){
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20, task resume: %lu", task_id);
         task->schedule();
     }
-    // Coro *coro = g_rpcCoroMgr->GetCoro(dstCoroId);
-    // if (!coro) {
-    //     LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "coro not found, coroId:%d", dstCoroId);
-    // }
-    // // TODO: 唤醒休眠的协程，传递收到的packet
-    // else {
-    //     coro->SetPtrParam1(&packet);
-    //     coro->Resume();
-    // }
 #endif
 }
 
-void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protobuf::Message *rsp) {
+void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protobuf::Message *rsp, const ::google::protobuf::MethodDescriptor *method, uint64_t task_id) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRpcDone, req: %s, rsp: %s", req->DebugString().c_str(),
          rsp->DebugString().c_str());
 auto packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
 packet->SetOpcode(RpcOpCode::RpcRsp);
+packet->Write(method->service()->name());
+packet->Write(method->name());
 #ifdef ENABLE_CXX20_COROUTINE
     // 协程方案
     // auto coro = g_rpcCoroMgr->GetCurCoro();
     // auto sessionId = coro->GetParam1();
     // auto srcCoroId = coro->GetParam2();
     packet->SetSessionId(sessionId_);
-    packet->Write(static_cast<uint64>(peer_task_id_));
+    packet->Write(static_cast<uint64>(task_id));
 #else
     // 直接调用方案
     packet->SetSessionId(sessionId_);

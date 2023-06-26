@@ -49,9 +49,11 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
 
 // 协程方案
 #ifndef ENABLE_CXX20_COROUTINE
-    auto func = [&controller, &response](void *) -> mt::Task<> {
+    auto func = [&response](void *) -> mt::Task<> {
             // 处理rsp
-            co_return;
+            // co_yield 0;
+            response->CopyFrom(*RpcController::GetInst().GetRsp());
+            LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved : %s", response->DebugString().c_str());
         };
     mt::run(func(nullptr));
 #else
@@ -72,7 +74,10 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
 
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%lu):%s", recvPacket->GetPayloadLength(),
          reinterpret_cast<const char *>(recvPacket->GetPayload()));
+    std::string A,B;
     uint64 srcCoroId;
+    recvPacket->Read(A);
+    recvPacket->Read(B);
     if (recvPacket->Read(srcCoroId) != LLBC_OK
         || recvPacket->Read(*response) != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read recvPacket fail");
