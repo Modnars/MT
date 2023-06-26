@@ -3,6 +3,7 @@
  * @Date: 2023.01.08 20:32:21
  * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
+#include <coroutine>
 #include <functional>
 
 #include <catch2/catch_approx.hpp>
@@ -323,6 +324,25 @@ SCENARIO("cancel a infinite loop coroutine") {
     }());
     REQUIRE(count > 0);
     REQUIRE(count < 10);
+}
+
+SCENARIO("test suspend a task", "[tag2]") {
+    int num = 0;
+    auto func = [&]() -> mt::Task<> {
+        num = 100;
+        co_await std::suspend_always{};
+        num = 200;
+        co_await std::suspend_always{};
+        num = 300;
+        co_return;
+    };
+    auto tt = func();
+    mt::run(tt);
+    REQUIRE(num == 100);
+    mt::run(tt);
+    REQUIRE(num == 200);
+    mt::run(tt);
+    REQUIRE(num == 300);
 }
 
 SCENARIO("test timeout") {

@@ -41,10 +41,9 @@ void RpcServiceMgr::AddService(::google::protobuf::Service *service) {
     _services[service_info.sd->name()] = service_info;
 }
 
-int32_t RpcServiceMgr::PreHandlePacket(LLBC_Packet &packet, std::string& serviceName, std::string& methodName, uint64_t& task_id) {
-    if( packet.Read(serviceName) != LLBC_OK ||
-        packet.Read(methodName) != LLBC_OK ||
-        packet.Read(task_id) != LLBC_OK) {
+int32_t RpcServiceMgr::PreHandlePacket(LLBC_Packet &packet, std::string &serviceName, std::string &methodName,
+                                       uint64_t &task_id) {
+    if (packet.Read(serviceName) != LLBC_OK || packet.Read(methodName) != LLBC_OK || packet.Read(task_id) != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "read packet failed");
         return -1;
     }
@@ -59,7 +58,7 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcReq");
     std::string serviceName, methodName;
     uint64_t task_id;
-    if(PreHandlePacket(packet, serviceName, methodName, task_id) != 0) {
+    if (PreHandlePacket(packet, serviceName, methodName, task_id) != 0) {
         return;
     }
 
@@ -72,7 +71,7 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     if (ret != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read req failed, ret: %d", ret);
         return;
-    }  
+    }
 
 #if ENABLE_CXX20_COROUTINE
     auto func = [&packet, service, method, req, rsp, task_id, this](void *) -> mt::Task<> {
@@ -92,13 +91,13 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 }
 
 void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
-#ifdef ENABLE_CXX20_COROUTINE
+#if ENABLE_CXX20_COROUTINE
     // fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
     //            "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcRsp");
     std::string serviceName, methodName;
     uint64_t task_id;
-    if(PreHandlePacket(packet, serviceName, methodName, task_id) != 0) {
+    if (PreHandlePacket(packet, serviceName, methodName, task_id) != 0) {
         return;
     }
 
@@ -111,24 +110,27 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
     if (ret != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read rsp failed, ret: %d", ret);
         return;
-    }  
+    }
 
     // 唤醒 task
     auto task = RpcController::GetInst().GetTaskbyID(task_id);
-    if(task){
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20, task resume: %lu", task_id);
-        task->schedule();
+    if (task) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace,
+             "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20, task resume: %lu", task_id);
+        // task->schedule();
+        mt::run(*task);
     }
 #endif
 }
 
-void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protobuf::Message *rsp, const ::google::protobuf::MethodDescriptor *method, uint64_t task_id) {
+void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protobuf::Message *rsp,
+                              const ::google::protobuf::MethodDescriptor *method, uint64_t task_id) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRpcDone, req: %s, rsp: %s", req->DebugString().c_str(),
          rsp->DebugString().c_str());
-auto packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
-packet->SetOpcode(RpcOpCode::RpcRsp);
-packet->Write(method->service()->name());
-packet->Write(method->name());
+    auto packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
+    packet->SetOpcode(RpcOpCode::RpcRsp);
+    packet->Write(method->service()->name());
+    packet->Write(method->name());
 #ifdef ENABLE_CXX20_COROUTINE
     // 协程方案
     // auto coro = g_rpcCoroMgr->GetCurCoro();

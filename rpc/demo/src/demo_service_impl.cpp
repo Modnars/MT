@@ -8,9 +8,9 @@
  */
 #include "demo_service_impl.h"
 #include "common/demo.pb.h"
+#include "conn_mgr.h"
 #include "llbc.h"
 #include "rpc_channel.h"
-#include "conn_mgr.h"
 
 using namespace llbc;
 

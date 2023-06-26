@@ -45,7 +45,7 @@ int main() {
 
     RpcServiceMgr serviceMgr(connMgr);
     serviceMgr.AddService(new DemoServiceImpl);
-    
+
     // 死循环处理 rpc 请求
     while (!stop) {
         connMgr->Tick();

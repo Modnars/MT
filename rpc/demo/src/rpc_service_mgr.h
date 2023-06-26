@@ -29,12 +29,14 @@ public:
 
 private:
     // 预处理 packet
-    int32_t PreHandlePacket(LLBC_Packet &packet, std::string& serviceName, std::string& methodName, uint64_t& task_id);
+    int32_t PreHandlePacket(llbc::LLBC_Packet &packet, std::string &serviceName, std::string &methodName,
+                            uint64_t &task_id);
     // 处理 RPC 请求和返回包
     void HandleRpcReq(llbc::LLBC_Packet &packet);
     void HandleRpcRsp(llbc::LLBC_Packet &packet);
     // 处理 RPC 处理结束
-    void OnRpcDone(::google::protobuf::Message *recv_msg, ::google::protobuf::Message *resp_msg, const ::google::protobuf::MethodDescriptor *method = nullptr, uint64_t task_id = 0);
+    void OnRpcDone(::google::protobuf::Message *recv_msg, ::google::protobuf::Message *resp_msg,
+                   const ::google::protobuf::MethodDescriptor *method = nullptr, uint64_t task_id = 0);
 
 private:
     struct ServiceInfo {

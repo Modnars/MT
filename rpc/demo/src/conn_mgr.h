@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "llbc.h"
 #include <mt/util/singleton.h>
+#include "llbc.h"
 
 using namespace llbc;
 
