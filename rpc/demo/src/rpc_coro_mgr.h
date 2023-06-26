@@ -10,6 +10,10 @@
 #pragma once
 
 #include "llbc.h"
+#include <mt/task.h>
+
+static uint64_t task_generate_id_;
+static std::map<uint64_t /* task_id_ */, mt::Task<> /* task_ */> id_to_task_map_;
 
 class BaseRpcCoroMgr;
 class Coro {

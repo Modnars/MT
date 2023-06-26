@@ -84,7 +84,7 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     // 直接调用方案
     // 创建 rpc 完成回调函数
     service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
-    OnRpcDone(req, rsp);
+    OnRpcDone(req, rsp, method, task_id);
 #endif
 }
 
@@ -109,12 +109,12 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
     }
 
     // 唤醒 task
-    auto task = RpcController::GetInst().GetTaskbyID(task_id);
-    if (task) {
+    auto it = id_to_task_map_.find(task_id);
+    if (it != id_to_task_map_.end()) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace,
              "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20, task resume: %lu", task_id);
         // task->schedule();
-        mt::run(*task);
+        mt::run(it->second);
     }
 #endif
 }
@@ -125,18 +125,17 @@ void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protob
          rsp->DebugString().c_str());
     auto packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
     packet->SetOpcode(RpcOpCode::RpcRsp);
+    packet->SetSessionId(sessionId_);
     packet->Write(method->service()->name());
     packet->Write(method->name());
-#ifdef ENABLE_CXX20_COROUTINE
+#if ENABLE_CXX20_COROUTINE
     // 协程方案
     // auto coro = g_rpcCoroMgr->GetCurCoro();
     // auto sessionId = coro->GetParam1();
     // auto srcCoroId = coro->GetParam2();
-    packet->SetSessionId(sessionId_);
     packet->Write(static_cast<uint64>(task_id));
 #else
     // 直接调用方案
-    packet->SetSessionId(sessionId_);
     packet->Write(uint64(555));
 #endif
 

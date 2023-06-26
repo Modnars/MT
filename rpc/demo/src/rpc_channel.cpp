@@ -41,8 +41,6 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
 
     sendPacket->Write(*request);
     connMgr_->PushPacket(sendPacket);
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Waiting!");
-
     // respone为空时直接返回，不等回包
     if (!response) {
         return;
@@ -51,14 +49,16 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
 // 协程方案
 #if ENABLE_CXX20_COROUTINE
     auto func = [&response](void *) -> mt::Task<> {
-        // 处理rsp
-        // co_yield 0;
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Wait Rsp");
         co_await std::suspend_always{};
+        // 处理rsp
         response->CopyFrom(*RpcController::GetInst().GetRsp());
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved : %s", response->DebugString().c_str());
         co_return;
     };
-    mt::run(func(nullptr));
+    //mt::Task<> task = func(nullptr);
+    id_to_task_map_.insert(std::make_pair(task_id, std::move(func(nullptr))));
+    mt::run(id_to_task_map_.find(task_id)->second);
 #else
     // 直接等待暴力回包方案, 100ms超时
     auto recvPacket = connMgr_->PopPacket();
