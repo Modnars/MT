@@ -58,9 +58,7 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcReq");
     std::string serviceName, methodName;
     uint64_t task_id;
-    if (PreHandlePacket(packet, serviceName, methodName, task_id) != 0) {
-        return;
-    }
+    COND_RET(PreHandlePacket(packet, serviceName, methodName, task_id) != 0);
 
     auto *service = _services[serviceName].service;
     auto *method = _services[serviceName].mds[methodName];
@@ -97,9 +95,7 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcRsp");
     std::string serviceName, methodName;
     uint64_t task_id;
-    if (PreHandlePacket(packet, serviceName, methodName, task_id) != 0) {
-        return;
-    }
+    COND_RET(PreHandlePacket(packet, serviceName, methodName, task_id) != 0);
 
     auto *service = _services[serviceName].service;
     auto *method = _services[serviceName].mds[methodName];

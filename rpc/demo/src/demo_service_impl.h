@@ -48,7 +48,7 @@ public:
             LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "create rpc channel failed");
             return false;
         }
-        LLBC_Defer(delete channel);
+        // LLBC_Defer(delete channel);
 
         // 内部 rpc 调用
         stubs_[sid] = new protocol::DemoService_Stub{channel};
