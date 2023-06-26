@@ -121,9 +121,14 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
 
 void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protobuf::Message *rsp,
                               const ::google::protobuf::MethodDescriptor *method, uint64_t task_id) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRpcDone, req: %s, rsp: %s", req->DebugString().c_str(),
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRpcDone|req: %s|rsp: %s", req->DebugString().c_str(),
          rsp->DebugString().c_str());
-    auto packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
+    auto *packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
+    if (!packet) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "alloc packet failed|req: %s|rsp: %s", req->DebugString().c_str(),
+             rsp->DebugString().c_str());
+        return;
+    }
     packet->SetOpcode(RpcOpCode::RpcRsp);
     packet->SetSessionId(sessionId_);
     packet->Write(method->service()->name());
