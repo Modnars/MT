@@ -21,18 +21,21 @@ void DemoServiceImpl::Echo(::google::protobuf::RpcController * /* controller */,
         protocol::EchoReq innerReq;
         protocol::EchoRsp innerRsp;
         innerReq.set_msg(std::string("A ") + req->msg());
-        // 创建 rpc channel
-        RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6699);
-        if (!channel) {
-            LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CreateRpcChannel Fail");
-            // rsp->set_msg("CreateRpcChannel Fail");
-            return;
-        }
+        auto *stub = DemoServiceHelper::GetInst().Stub(1UL);
+        COND_RET(!stub);  // TODO add COND_RET_UID_XLOG macro
+        stub->Echo(&RpcController::GetInst(), &innerReq, &innerRsp, nullptr);
+        // // 创建 rpc channel
+        // RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6699);
+        // if (!channel) {
+        //     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CreateRpcChannel Fail");
+        //     // rsp->set_msg("CreateRpcChannel Fail");
+        //     return;
+        // }
 
-        // 内部 rpc 调用
-        protocol::DemoService_Stub stub(channel);
-        stub.Echo(&RpcController::GetInst(), &innerReq, &innerRsp, nullptr);
-        delete channel;
+        // // 内部 rpc 调用
+        // protocol::DemoService_Stub stub(channel);
+        // stub.Echo(&RpcController::GetInst(), &innerReq, &innerRsp, nullptr);
+        // delete channel;
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "RECEIVED inner RSP: %s", innerRsp.msg().c_str());
 
         rsp->set_msg(std::string("FIX: ") + innerRsp.msg());

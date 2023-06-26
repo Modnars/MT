@@ -29,26 +29,29 @@ int main() {
     // 初始化日志
     auto ret = LLBC_LoggerMgrSingleton->Initialize("log/cfg/server_log.cfg");
     if (ret == LLBC_FAILED) {
-        fmt::print("Initialize logger failed, error: %s\n", LLBC_FormatLastError());
+        fmt::print("Initialize logger failed|error: %s\n", LLBC_FormatLastError());
         return -1;
     }
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Hello Server!");
 
-    ConnMgr *connMgr = &ConnMgr::GetInst();
-    connMgr->Init();
+    ret = ConnMgr::GetInst().Init();
+    if (ret != 0) {
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "ConnMgr Init failed|ret:%d", ret);
+        return ret;
+    }
 
     // 启动 rpc 服务
-    if (connMgr->StartRpcService("127.0.0.1", 6699) != LLBC_OK) {
+    if (ConnMgr::GetInst().StartRpcService("127.0.0.1", 6699) != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "connMgr StartRpcService Failed");
         return -1;
     }
 
-    RpcServiceMgr serviceMgr(connMgr);
+    RpcServiceMgr serviceMgr(&ConnMgr::GetInst());
     serviceMgr.AddService(new DemoServiceImpl);
 
     // 死循环处理 rpc 请求
     while (!stop) {
-        connMgr->Tick();
+        ConnMgr::GetInst().Tick();
         LLBC_Sleep(1);
     }
 

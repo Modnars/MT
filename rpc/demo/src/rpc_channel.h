@@ -9,12 +9,13 @@
 
 #pragma once
 
+#include <map>
+
 #include <google/protobuf/message.h>
 #include <google/protobuf/service.h>
 #include <google/protobuf/stubs/common.h>
 #include <mt/task.h>
 #include <mt/util/singleton.h>
-#include <map>
 
 class ConnMgr;
 

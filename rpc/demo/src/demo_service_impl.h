@@ -8,9 +8,14 @@
  */
 #pragma once
 
+#include <unordered_map>
+
 #include <mt/util/macros.h>
 #include <mt/util/singleton.h>
+
 #include "common/demo_service.pb.h"
+#include "conn_mgr.h"
+#include "rpc_channel.h"
 
 class DemoServiceImpl : public protocol::DemoService {
 public:
@@ -22,13 +27,46 @@ public:
 // NOTES: 便于 server 端调用，支持自动生成更好
 class DemoServiceHelper : public mt::Singleton<DemoServiceHelper> {
 public:
-    bool Init(protocol::DemoService_Stub *stub) {
-        COND_RET(!stub, false);
-        stub_ = stub;
+    using server_id = std::uint64_t;
+    ~DemoServiceHelper() {
+        for (auto kv : stubs_) {
+            if (kv.second)
+                delete kv.second;
+        }
+    }
+
+public:
+    bool Init() { return true; }
+
+    bool Register(const char *ip, int port, server_id sid) {
+        if (auto iter = stubs_.find(sid); iter != stubs_.end()) {
+            LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "repeated server_id|sid:%lu", sid);
+            return false;
+        }
+        RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel(ip, port);
+        if (!channel) {
+            LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "create rpc channel failed");
+            return false;
+        }
+        LLBC_Defer(delete channel);
+
+        // 内部 rpc 调用
+        stubs_[sid] = new protocol::DemoService_Stub{channel};
+        if (stubs_[sid] == nullptr) {
+            LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "create service stub failed|sid:%lu", sid);
+            return false;
+        }
         return true;
     }
-    protocol::DemoService_Stub &Stub() const { return *stub_; }
+
+    protocol::DemoService_Stub *Stub(server_id sid = 0UL) const {
+        if (auto iter = stubs_.find(sid); iter != stubs_.end()) {
+            return iter->second;
+        }
+        return nullptr;
+    }
 
 private:
-    protocol::DemoService_Stub *stub_ = nullptr;
+    // map<uid, stub>
+    std::unordered_map<std::uint64_t, protocol::DemoService_Stub *> stubs_;
 };
