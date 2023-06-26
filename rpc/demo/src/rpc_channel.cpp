@@ -52,12 +52,16 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Wait Rsp");
         co_await std::suspend_always{};
         // 处理rsp
-        response->CopyFrom(*RpcController::GetInst().GetRsp());
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved : %s", response->DebugString().c_str());
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Task Resume");
+        response = RpcController::GetInst().GetRsp();
+        // if (response){
+        //     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved : %s", response->DebugString().c_str());
+        // }
         co_return;
     };
-    //mt::Task<> task = func(nullptr);
+    // mt::Task<> task = func(nullptr);
     id_to_task_map_.insert(std::make_pair(task_id, std::move(func(nullptr))));
+    // LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Add task to map: %lu | %d", task_id, &id_to_task_map_.find(task_id)->second);
     mt::run(id_to_task_map_.find(task_id)->second);
 #else
     // 直接等待暴力回包方案, 100ms超时

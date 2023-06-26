@@ -100,19 +100,21 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
     auto *service = _services[serviceName].service;
     auto *method = _services[serviceName].mds[methodName];
     // 解析 rsp
-    auto *rsp = RpcController::GetInst().GetRsp();
-    rsp = service->GetResponsePrototype(method).New();
+    // auto* rsp = RpcController::GetInst().GetRsp();
+    auto* rsp = service->GetResponsePrototype(method).New();
     auto ret = packet.Read(*rsp);
     if (ret != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read rsp failed, ret: %d", ret);
         return;
     }
+    RpcController::GetInst().SetRsp(std::unique_ptr<::google::protobuf::Message>(rsp));
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recv rsp: %s", rsp->DebugString().c_str());
 
     // 唤醒 task
     auto it = id_to_task_map_.find(task_id);
     if (it != id_to_task_map_.end()) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Trace,
-             "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20, task resume: %lu", task_id);
+             "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20, task resume: %lu | %d", task_id, &it->second);
         // task->schedule();
         mt::run(it->second);
     }
@@ -121,8 +123,8 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
 
 void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protobuf::Message *rsp,
                               const ::google::protobuf::MethodDescriptor *method, uint64_t task_id) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRpcDone|req: %s|rsp: %s", req->DebugString().c_str(),
-         rsp->DebugString().c_str());
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRpcDone|req: %s|rsp: %s|task id: %lu", req->DebugString().c_str(),
+         rsp->DebugString().c_str(), task_id);
     auto *packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
     if (!packet) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "alloc packet failed|req: %s|rsp: %s", req->DebugString().c_str(),
@@ -138,7 +140,7 @@ void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protob
     // auto coro = g_rpcCoroMgr->GetCurCoro();
     // auto sessionId = coro->GetParam1();
     // auto srcCoroId = coro->GetParam2();
-    packet->Write(static_cast<uint64>(task_id));
+    packet->Write(task_id);
 #else
     // 直接调用方案
     packet->Write(uint64(555));

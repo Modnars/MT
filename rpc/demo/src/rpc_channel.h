@@ -21,6 +21,8 @@ class ConnMgr;
 
 class RpcController : public ::google::protobuf::RpcController, public mt::Singleton<RpcController> {
 public:
+    RpcController() : task_generate_id_(0), rsp_(nullptr) {}
+    ~RpcController() {}
     virtual void Reset() { }
     virtual bool Failed() const { return false; }
     virtual std::string ErrorText() const { return ""; }
@@ -29,11 +31,12 @@ public:
     virtual bool IsCanceled() const { return false; }
     virtual void NotifyOnCancel(::google::protobuf::Closure * /* callback */) { }
     uint64_t GetID() { return ++task_generate_id_; }
-    ::google::protobuf::Message *GetRsp() { return rsp_; }
+    ::google::protobuf::Message* GetRsp() { return rsp_.release(); }
+    void SetRsp(std::unique_ptr<::google::protobuf::Message> rsp) { rsp_ = std::move(rsp); };
 
 private:
     uint64_t task_generate_id_;
-    ::google::protobuf::Message *rsp_;
+    std::unique_ptr<::google::protobuf::Message> rsp_;
 };
 
 class RpcChannel : public ::google::protobuf::RpcChannel {

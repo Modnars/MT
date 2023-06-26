@@ -24,6 +24,7 @@ int main() {
 
     // 初始化 llbc 库
     LLBC_Startup();
+    LLBC_HookProcessCrash();
     LLBC_Defer(LLBC_Cleanup());
 
     // 初始化日志
