@@ -72,14 +72,14 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
     }
 
 #if ENABLE_CXX20_COROUTINE
-    auto func = [&packet, service, method, req, rsp, task_id, this](void *) -> mt::Task<> {
+    auto func = [service, method, req, rsp, task_id, this]() -> mt::Task<> {
         fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
                    "[HANDLE_RPC_REQ] THIS IS A COROUTINE CALL FROM C++20\n");
         service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
         OnRpcDone(req, rsp, method, task_id);
         co_return;
     };
-    mt::run(func(nullptr));
+    mt::run(func());
 #else
     // 直接调用方案
     // 创建 rpc 完成回调函数

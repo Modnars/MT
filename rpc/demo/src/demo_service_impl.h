@@ -28,6 +28,8 @@ public:
 class DemoServiceHelper : public mt::Singleton<DemoServiceHelper> {
 public:
     using server_id = std::uint64_t;
+
+public:
     ~DemoServiceHelper() {
         for (auto kv : stubs_) {
             if (kv.second)
