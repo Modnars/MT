@@ -19,11 +19,12 @@ void DemoServiceImpl::Echo(::google::protobuf::RpcController * /* controller */,
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "RECEIVED MSG: %s", req->msg().c_str());
     if (req->msg().size() > 0UL && req->msg()[0] != 'A') {
         protocol::EchoReq innerReq;
-        protocol::EchoRsp innerRsp;
+        protocol::EchoRsp *innerRsp = new protocol::EchoRsp();
         innerReq.set_msg(std::string("A ") + req->msg());
+        innerRsp->set_msg(std::string("test rsp"));
         auto *stub = DemoServiceHelper::GetInst().Stub(1UL);
         COND_RET(!stub);  // TODO add COND_RET_UID_XLOG macro
-        stub->Echo(&RpcController::GetInst(), &innerReq, &innerRsp, nullptr);
+        stub->Echo(&RpcController::GetInst(), &innerReq, innerRsp, nullptr);
         // // 创建 rpc channel
         // RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6699);
         // if (!channel) {
@@ -36,9 +37,9 @@ void DemoServiceImpl::Echo(::google::protobuf::RpcController * /* controller */,
         // protocol::DemoService_Stub stub(channel);
         // stub.Echo(&RpcController::GetInst(), &innerReq, &innerRsp, nullptr);
         // delete channel;
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "RECEIVED inner RSP: %s", innerRsp.msg().c_str());
+        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "RECEIVED inner RSP: %s", innerRsp->msg().c_str());
 
-        rsp->set_msg(std::string("FIX: ") + innerRsp.msg());
+        rsp->set_msg(std::string("FIX: ") + innerRsp->msg());
         return;
     }
 

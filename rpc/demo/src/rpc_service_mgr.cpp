@@ -89,9 +89,6 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 }
 
 void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
-#if ENABLE_CXX20_COROUTINE
-    // fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
-    //            "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20\n");
     LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcRsp");
     std::string serviceName, methodName;
     uint64_t task_id;
@@ -100,16 +97,18 @@ void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
     auto *service = _services[serviceName].service;
     auto *method = _services[serviceName].mds[methodName];
     // 解析 rsp
-    // auto* rsp = RpcController::GetInst().GetRsp();
-    auto* rsp = service->GetResponsePrototype(method).New();
+    auto *rsp = RpcController::GetInst().GetRsp();
+    // auto *rsp = service->GetResponsePrototype(method).New();
+    // auto *rsp = ::google::protobuf::down_cast<decltype(service->GetResponsePrototype(method).New())>(
+    //     RpcController::GetInst().GetRsp());
     auto ret = packet.Read(*rsp);
     if (ret != LLBC_OK) {
         LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read rsp failed, ret: %d", ret);
         return;
     }
-    RpcController::GetInst().SetRsp(std::unique_ptr<::google::protobuf::Message>(rsp));
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recv rsp: %s", rsp->DebugString().c_str());
+    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recv rsp: %d(%s)", rsp, rsp->DebugString().c_str());
 
+#if ENABLE_CXX20_COROUTINE
     // 唤醒 task
     auto it = id_to_task_map_.find(task_id);
     if (it != id_to_task_map_.end()) {
@@ -143,7 +142,7 @@ void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protob
     packet->Write(task_id);
 #else
     // 直接调用方案
-    packet->Write(uint64(555));
+    packet->Write(uint64_t(555));
 #endif
 
     packet->Write(*rsp);
