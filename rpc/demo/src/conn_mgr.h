@@ -9,8 +9,8 @@
 
 #pragma once
 
+#include <llbc.h>
 #include <mt/util/singleton.h>
-#include "llbc.h"
 
 using namespace llbc;
 
@@ -82,7 +82,7 @@ int LockFreeQueue<T, QueueCapacity>::GetSize() {
 class ConnComp : public LLBC_Component {
 public:
     ConnComp();
-    virtual ~ConnComp(){};
+    virtual ~ConnComp() { }
 
 public:
     // 放入发送包

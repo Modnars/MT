@@ -6,28 +6,51 @@
  * @edit: regangcli
  * @brief:
  */
+#include <coroutine>
 
 #include <fmt/color.h>
-#include "llbc.h"
+#include <llbc.h>
 
 #include <mt/runner.h>
 #include <mt/task.h>
 
+#include "common/error_code.pb.h"
 #include "conn_mgr.h"
+#include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
 
 using namespace llbc;
 
+namespace util {
+
+int32_t ParseNetPacket(llbc::LLBC_Packet &packet, PkgHead &pkg_head) {
+    int ret = packet.Read(pkg_head.service);
+    COND_RET_ELOG(ret != LLBC_OK, ret, "read service_name failed|ret:%d", ret);
+    ret = packet.Read(pkg_head.method);
+    COND_RET_ELOG(ret != LLBC_OK, ret, "read method_name failed|ret:%d", ret);
+    ret = packet.Read(pkg_head.coro_uid);
+    COND_RET_ELOG(ret != LLBC_OK, ret, "read coro_uid failed|ret:%d", ret);
+    LLOG_INFO("parse net packet done|service:%s|mthod:%s|coro_uid:%lu|sesson_id:%d", pkg_head.service.c_str(),
+              pkg_head.method.c_str(), pkg_head.coro_uid, packet.GetSessionId());
+    return protocol::ErrorCode::SUCCESS;
+}
+
+}  // namespace util
+
 RpcServiceMgr::RpcServiceMgr(ConnMgr *connMgr) : connMgr_(connMgr) {
-    connMgr_->Subscribe(RpcOpCode::RpcReq, LLBC_Delegate<void(LLBC_Packet &)>(this, &RpcServiceMgr::HandleRpcReq));
-    connMgr_->Subscribe(RpcOpCode::RpcRsp, LLBC_Delegate<void(LLBC_Packet &)>(this, &RpcServiceMgr::HandleRpcRsp));
+    if (connMgr_) [[likely]] {
+        connMgr_->Subscribe(RpcOpCode::RpcReq, LLBC_Delegate<void(LLBC_Packet &)>(this, &RpcServiceMgr::HandleRpcReq));
+        connMgr_->Subscribe(RpcOpCode::RpcRsp, LLBC_Delegate<void(LLBC_Packet &)>(this, &RpcServiceMgr::HandleRpcRsp));
+    }
 }
 
 RpcServiceMgr::~RpcServiceMgr() {
-    connMgr_->Unsubscribe(RpcOpCode::RpcReq);
-    connMgr_->Unsubscribe(RpcOpCode::RpcRsp);
+    if (connMgr_) [[likely]] {
+        connMgr_->Unsubscribe(RpcOpCode::RpcReq);
+        connMgr_->Unsubscribe(RpcOpCode::RpcRsp);
+    }
 }
 
 void RpcServiceMgr::AddService(::google::protobuf::Service *service) {
@@ -37,49 +60,35 @@ void RpcServiceMgr::AddService(::google::protobuf::Service *service) {
     for (int i = 0; i < service_info.sd->method_count(); ++i) {
         service_info.mds[service_info.sd->method(i)->name()] = service_info.sd->method(i);
     }
-
     _services[service_info.sd->name()] = service_info;
 }
 
-int32_t RpcServiceMgr::PreHandlePacket(LLBC_Packet &packet, std::string &serviceName, std::string &methodName,
-                                       uint64_t &task_id) {
-    if (packet.Read(serviceName) != LLBC_OK || packet.Read(methodName) != LLBC_OK || packet.Read(task_id) != LLBC_OK) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "read packet failed");
-        return -1;
-    }
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv service_name: %s", serviceName.c_str());
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "recv method_name: %s", methodName.c_str());
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "get task id: %lu", task_id);
-    sessionId_ = packet.GetSessionId();
-    return 0;
-}
-
 void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcReq");
-    std::string serviceName, methodName;
-    uint64_t task_id;
-    COND_RET(PreHandlePacket(packet, serviceName, methodName, task_id) != 0);
+    LLOG_TRACE("HandleRpcReq");
+    PkgHead pkg_head;
+    COND_RET(util::ParseNetPacket(packet, pkg_head) != 0);
+    sessionId_ = packet.GetSessionId();
 
-    auto *service = _services[serviceName].service;
-    auto *method = _services[serviceName].mds[methodName];
+    auto *service = _services[pkg_head.service].service;
+    auto *method = _services[pkg_head.service].mds[pkg_head.method];
     // 解析 req & 创建 rsp
     auto *req = service->GetRequestPrototype(method).New();
     auto *rsp = service->GetResponsePrototype(method).New();
     auto ret = packet.Read(*req);
-    if (ret != LLBC_OK) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read req failed, ret: %d", ret);
-        return;
-    }
+    COND_RET_ELOG(ret != LLBC_OK, , "read req failed|ret:%d", ret);
 
 #if ENABLE_CXX20_COROUTINE
-    auto func = [service, method, req, rsp, task_id, this]() -> mt::Task<> {
-        fmt::print(fg(fmt::color::floral_white) | bg(fmt::color::slate_gray) | fmt::emphasis::underline,
-                   "[HANDLE_RPC_REQ] THIS IS A COROUTINE CALL FROM C++20\n");
+    auto func = [service, method, req, rsp, pkg_head, this]() -> mt::Task<> {
+        LLOG_INFO("[HANDLE_RPC_REQ] COROUTINE CALL FROM C++20");
         service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
-        OnRpcDone(req, rsp, method, task_id);
+        // co_await std::suspend_always{};  // 这里直接挂起
+        LLOG_INFO("[HANDLE_RPC_REQ] COROUTINE CALL FROM C++20|RESUME");
+        OnRpcDone(req, rsp, method, pkg_head.coro_uid);
         co_return;
     };
-    mt::run(func());
+    auto tt = func();
+    mt::run(tt);
+    RpcCoroMgr::GetInst().Suspend(std::move(tt));
 #else
     // 直接调用方案
     // 创建 rpc 完成回调函数
@@ -89,51 +98,43 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 }
 
 void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "HandleRpcRsp");
-    std::string serviceName, methodName;
-    uint64_t task_id;
-    COND_RET(PreHandlePacket(packet, serviceName, methodName, task_id) != 0);
+    LLOG_TRACE("HandleRpcRsp");
+    PkgHead pkg_head;
+    COND_RET(util::ParseNetPacket(packet, pkg_head) != 0);
+    sessionId_ = packet.GetSessionId();
 
-    auto *service = _services[serviceName].service;
-    auto *method = _services[serviceName].mds[methodName];
+    auto *service = _services[pkg_head.service].service;
+    auto *method = _services[pkg_head.service].mds[pkg_head.method];
     // 解析 rsp
     auto *rsp = RpcController::GetInst().GetRsp();
     // auto *rsp = service->GetResponsePrototype(method).New();
     // auto *rsp = ::google::protobuf::down_cast<decltype(service->GetResponsePrototype(method).New())>(
     //     RpcController::GetInst().GetRsp());
     auto ret = packet.Read(*rsp);
-    if (ret != LLBC_OK) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read rsp failed, ret: %d", ret);
-        return;
-    }
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recv rsp: %d(%s)", rsp, rsp->DebugString().c_str());
+    COND_RET_ELOG(ret != LLBC_OK, , "read rsp failed|ret:%d", ret);
+
+    LLOG_INFO("received rsp|address:%p|info: %s", rsp, rsp->DebugString().c_str());
 
 #if ENABLE_CXX20_COROUTINE
-    // 唤醒 task
-    auto it = id_to_task_map_.find(task_id);
-    if (it != id_to_task_map_.end()) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace,
-             "[HANDLE_RPC_RSP] THIS IS A COROUTINE CALL FROM C++20, task resume: %lu | %d", task_id, &it->second);
-        // task->schedule();
-        mt::run(it->second);
-    }
+    // 拿出 coro_uid 直接唤醒执行
+    mt::run(RpcCoroMgr::GetInst().Pop(static_cast<RpcCoroMgr::coro_uid_type>(pkg_head.coro_uid)));
 #endif
 }
 
 void RpcServiceMgr::OnRpcDone(::google::protobuf::Message *req, ::google::protobuf::Message *rsp,
                               const ::google::protobuf::MethodDescriptor *method, uint64_t task_id) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRpcDone|req: %s|rsp: %s|task id: %lu", req->DebugString().c_str(),
-         rsp->DebugString().c_str(), task_id);
+    LLOG_TRACE("OnRpcDone|req: %s|rsp: %s|task_id:%lu", req->ShortDebugString().c_str(),
+               rsp->ShortDebugString().c_str(), task_id);
+
     auto *packet = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
-    if (!packet) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "alloc packet failed|req: %s|rsp: %s", req->DebugString().c_str(),
-             rsp->DebugString().c_str());
-        return;
-    }
+    COND_RET_ELOG(!packet, , "alloc packet failed|req: %s|rsp: %s", req->ShortDebugString().c_str(),
+                  rsp->ShortDebugString().c_str());
+
     packet->SetOpcode(RpcOpCode::RpcRsp);
     packet->SetSessionId(sessionId_);
     packet->Write(method->service()->name());
     packet->Write(method->name());
+
 #if ENABLE_CXX20_COROUTINE
     // 协程方案
     // auto coro = g_rpcCoroMgr->GetCurCoro();

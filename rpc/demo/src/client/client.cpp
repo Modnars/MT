@@ -2,15 +2,15 @@
 #include <iostream>
 
 #include <fmt/core.h>
-#include "common/demo.pb.h"
-#include "llbc.h"
+#include <llbc.h>
+#include <mt/runner.h>
 
 #include "common/demo_service.pb.h"
 #include "conn_mgr.h"
+#include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
-#include <mt/runner.h>
 
 using namespace llbc;
 
@@ -31,29 +31,18 @@ int main() {
 
     // 初始化日志
     auto ret = LLBC_LoggerMgrSingleton->Initialize("log/cfg/server_log.cfg");
-    if (ret == LLBC_FAILED) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Initialize logger failed, error:%s", LLBC_FormatLastError());
-        return -1;
-    }
+    COND_RET_ELOG(ret != LLBC_OK, -1, "init logger failed|error: %s", LLBC_FormatLastError());
 
     // 初始化连接管理器
-    ConnMgr *connMgr = new ConnMgr();
-    ret = connMgr->Init();
-    if (ret != LLBC_OK) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Initialize connMgr failed, error:%s", LLBC_FormatLastError());
-        return -1;
-    }
+    ret = ConnMgr::GetInst().Init();
+    COND_RET_ELOG(ret != LLBC_OK, -1, "init ConnMgr failed|error: %s", LLBC_FormatLastError());
 
     // 创建 rpc channel
-    RpcChannel *channel = connMgr->CreateRpcChannel("127.0.0.1", 6688);
+    RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6688);
     LLBC_Defer(delete channel);
 
-    if (!channel) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CreateRpcChannel Fail");
-        return -1;
-    }
-
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Client Start!");
+    COND_RET_ELOG(!channel, -1, "CreateRpcChannel failed");
+    LLOG_TRACE("CLIENT START!");
 
     // 创建 rpc req & resp
     protocol::EchoReq req;
@@ -61,23 +50,24 @@ int main() {
     req.set_msg("hello, myrpc.");
 
     // 创建 rpc controller & stub
-    protocol::DemoService_Stub stub(channel);
+    protocol::DemoService_Stub stub{channel};
 
 #if ENABLE_CXX20_COROUTINE
-    // 协程方案, 在新协程中call rpc
-    RpcServiceMgr serviceMgr(connMgr);
+    // 协程方案, 在新协程中 call rpc
+    RpcServiceMgr serviceMgr(&ConnMgr::GetInst());
     while (!stop) {
         std::string input;
         std::cin >> input;  // 手动阻塞
         if (input != "\n")
             req.set_msg(input.c_str());
-        // 创建协程并Resume
-        auto func = [&stub, &req, &rsp](void *) -> mt::Task<> {
+        // 创建协程并 Resume
+        auto func = [&stub, &req, &rsp]() -> mt::Task<> {
             stub.Echo(&RpcController::GetInst(), &req, &rsp, nullptr);
-            // 处理rsp
+            LLOG_INFO("received rsp: %s", rsp.msg().c_str());
+            // 处理 rsp
             co_return;
         };
-        mt::run(func(nullptr));
+        mt::run(func());
 
         // 处理服务收到的数据包，若有Rpc Rsp，OnUpdate内部会唤醒对应休眠的协程
         // connMgr->Tick();
@@ -100,5 +90,3 @@ int main() {
 
     return 0;
 }
-
-/* vim: set ts=4 sw=4 sts=4 tw=100 */

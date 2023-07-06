@@ -4,21 +4,25 @@
  * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #include <algorithm>
+#include <chrono>
 #include <coroutine>
 #include <functional>
 #include <iostream>
-#include <vector>
 #include <random>
-#include <chrono>
+#include <vector>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
+
+#include <mt/util/singleton.h>
 
 template <typename _Tp>
 void print(const std::vector<_Tp> &vec) {
-    for (const auto &v: vec)
-        std::cout << v << " ";
-    std::cout << std::endl;
+    fmt::print("{}", fmt::join(vec, ", "));
+    fmt::print("\n");
 }
 
-int main() {
+void test_ranges_oper() {
     auto seed = std::chrono::steady_clock::now().time_since_epoch().count();
     std::default_random_engine engine{static_cast<uint64_t>(seed)};
     std::vector<int> seq;
@@ -28,11 +32,30 @@ int main() {
         std::ranges::push_heap(seq, std::ranges::greater{});
     }
     print(seq);
+    std::vector<int> order(seq.size());
     for (std::size_t i = 0UL; i != data_num; ++i) {
         std::ranges::pop_heap(seq, std::ranges::greater{});
-        std::cout << seq.back() <<  " ";
+        order[i] = seq.back();
         seq.pop_back();
     }
-    std::cout << std::endl;
+    print(order);
+}
+
+struct A : public mt::Singleton<A> {
+public:
+    ~A() { std::cout << "call A destructor" << std::endl; }
+
+    void foo() const { std::cout << "Hello" << std::endl; }
+};
+
+void test_single_pattern_destructor() {
+    A::GetInst().foo();
+}
+
+int main() {
+    fmt::print(">>> TEST BEGIN <<<\n");
+    test_ranges_oper();
+    test_single_pattern_destructor();
+    fmt::print(">>> TEST END <<<\n");
     return 0;
 }

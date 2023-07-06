@@ -126,7 +126,7 @@ bool ConnMgr::Tick() {
     auto packet = PopPacket();
     while (packet) {
         ret = true;
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Warn, "Tick");
+        LLOG_INFO("Tick");
         auto it = packetDelegs_.find(packet->GetOpcode());
         if (it == packetDelegs_.end())
             LLOG(nullptr, nullptr, LLBC_LogLevel::Warn, "Recv Untapped opcode:%d", packet->GetOpcode());

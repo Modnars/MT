@@ -1,7 +1,5 @@
 package protocol;
 
-option cc_generic_services = true;
-
 message EchoReq {
     required string msg = 1;
 }
@@ -14,6 +12,7 @@ message A {
     repeated int32 urls = 2;
     optional int32 id = 3;
 }
+
 message B {
     optional int32 b = 1;
     message HeHeB {

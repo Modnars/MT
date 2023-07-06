@@ -1,0 +1,9 @@
+package protocol;
+
+enum ErrorCode {
+    SUCCESS = 0;
+    FAILURE = -1;
+
+    RECV_PKG_TIME_OUT = -1000;
+    PARSE_PKG_FAILED = -1001;
+}

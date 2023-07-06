@@ -136,6 +136,7 @@ public:
         return AwaiterImpl{handle_};
     }
 
+    HandleId id() const { return handle_.promise().handle_id(); }
     bool valid() const { return handle_ != nullptr; }
     bool done() const { return handle_.done(); }
     void schedule() { handle_.promise().schedule(); }

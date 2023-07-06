@@ -21,7 +21,7 @@ class ConnMgr;
 
 class RpcController : public ::google::protobuf::RpcController, public mt::Singleton<RpcController> {
 public:
-    RpcController() : task_generate_id_(0), rsp_(nullptr) { }
+    RpcController() : rsp_(nullptr) { }
     ~RpcController() { }
     virtual void Reset() { }
     virtual bool Failed() const { return false; }
@@ -30,12 +30,10 @@ public:
     virtual void SetFailed(const std::string & /* reason */) { }
     virtual bool IsCanceled() const { return false; }
     virtual void NotifyOnCancel(::google::protobuf::Closure * /* callback */) { }
-    uint64_t GetID() { return ++task_generate_id_; }
     ::google::protobuf::Message *GetRsp() { return rsp_; }
     void SetRsp(::google::protobuf::Message *rsp) { rsp_ = rsp; }
 
 private:
-    uint64_t task_generate_id_;
     ::google::protobuf::Message *rsp_;
 };
 
@@ -44,9 +42,12 @@ public:
     RpcChannel(ConnMgr *connMgr, int sessionId) : connMgr_(connMgr), sessionId_(sessionId) { }
     virtual ~RpcChannel();
 
-    virtual void CallMethod(const ::google::protobuf::MethodDescriptor *method,
-                            ::google::protobuf::RpcController *controller, const ::google::protobuf::Message *request,
-                            ::google::protobuf::Message *response, ::google::protobuf::Closure *);
+    void CallMethod(const ::google::protobuf::MethodDescriptor *method, ::google::protobuf::RpcController *controller,
+                    const ::google::protobuf::Message *request, ::google::protobuf::Message *response,
+                    ::google::protobuf::Closure *done) override;
+
+private:
+    int32_t BlockingWaitResponse(::google::protobuf::Message *response);
 
 private:
     ConnMgr *connMgr_ = nullptr;
