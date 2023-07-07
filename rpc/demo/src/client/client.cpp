@@ -54,7 +54,8 @@ int main() {
 
 #if ENABLE_CXX20_COROUTINE
     // 协程方案, 在新协程中 call rpc
-    RpcServiceMgr serviceMgr(&ConnMgr::GetInst());
+    ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
+    COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
     while (!stop) {
         std::string input;
         std::cin >> input;  // 手动阻塞
@@ -64,7 +65,6 @@ int main() {
         auto func = [&stub, &req, &rsp]() -> mt::Task<> {
             stub.Echo(&RpcController::GetInst(), &req, &rsp, nullptr);
             LLOG_INFO("received rsp: %s", rsp.msg().c_str());
-            // 处理 rsp
             co_return;
         };
         mt::run(func());
@@ -81,12 +81,12 @@ int main() {
         if (input != "\n")
             req.set_msg(input.c_str());
         stub.Echo(&RpcController::GetInst(), &req, &rsp, nullptr);
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "RECEIVED RSP: %s", rsp.msg().c_str());
+        LLOG_TRACE("RECEIVED RSP: %s", rsp.msg().c_str());
         // LLBC_Sleep(1000);
     }
 #endif
 
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "client Stop");
+    LLOG_TRACE("client stop");
 
     return 0;
 }

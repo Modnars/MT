@@ -39,11 +39,14 @@ int32_t ParseNetPacket(llbc::LLBC_Packet &packet, PkgHead &pkg_head) {
 
 }  // namespace util
 
-RpcServiceMgr::RpcServiceMgr(ConnMgr *connMgr) : connMgr_(connMgr) {
+int RpcServiceMgr::Init(ConnMgr *conn_mgr) {
+    COND_RET_ELOG(connMgr_ != nullptr, -1, "ConnMgr has already been registered|address:%p", connMgr_);
+    connMgr_ = conn_mgr;
     if (connMgr_) [[likely]] {
         connMgr_->Subscribe(RpcOpCode::RpcReq, LLBC_Delegate<void(LLBC_Packet &)>(this, &RpcServiceMgr::HandleRpcReq));
         connMgr_->Subscribe(RpcOpCode::RpcRsp, LLBC_Delegate<void(LLBC_Packet &)>(this, &RpcServiceMgr::HandleRpcRsp));
     }
+    return 0;
 }
 
 RpcServiceMgr::~RpcServiceMgr() {

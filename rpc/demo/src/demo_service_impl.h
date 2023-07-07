@@ -15,6 +15,7 @@
 
 #include "common/demo_service.pb.h"
 #include "conn_mgr.h"
+#include "macros.h"
 #include "rpc_channel.h"
 
 class DemoServiceImpl : public protocol::DemoService {
@@ -42,22 +43,16 @@ public:
 
     bool Register(const char *ip, int port, server_id sid) {
         if (auto iter = stubs_.find(sid); iter != stubs_.end()) {
-            LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "repeated server_id|sid:%lu", sid);
+            LLOG_ERROR("repeated server_id|sid:%lu", sid);
             return false;
         }
         RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel(ip, port);
-        if (!channel) {
-            LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "create rpc channel failed");
-            return false;
-        }
+        COND_RET_ELOG(!channel, false, "create rpc channel failed|ip:%s|port:%d", ip, port);
         // LLBC_Defer(delete channel);
 
         // 内部 rpc 调用
         stubs_[sid] = new protocol::DemoService_Stub{channel};
-        if (stubs_[sid] == nullptr) {
-            LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "create service stub failed|sid:%lu", sid);
-            return false;
-        }
+        COND_RET_ELOG(stubs_[sid] == nullptr, false, "create service stub failed|sid:%lu", sid);
         return true;
     }
 

@@ -1,11 +1,11 @@
 #include <csignal>
 
 #include <fmt/core.h>
-#include "llbc.h"
+#include <llbc.h>
 
 #include "conn_mgr.h"
 #include "demo_service_impl.h"
-#include "llbc/core/log/LogLevel.h"
+#include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_service_mgr.h"
 
@@ -32,22 +32,18 @@ int main() {
         fmt::print("Initialize logger failed|error: %s\n", LLBC_FormatLastError());
         return -1;
     }
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Hello Server!");
+    LLOG_TRACE("Hello Server!");
 
     ret = ConnMgr::GetInst().Init();
-    if (ret != 0) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "ConnMgr Init failed|ret:%d", ret);
-        return ret;
-    }
+    COND_RET_ELOG(ret != 0, ret, "ConnMgr init failed|ret:%d", ret);
 
     // 启动 rpc 服务
-    if (ConnMgr::GetInst().StartRpcService("127.0.0.1", 6699) != LLBC_OK) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "connMgr StartRpcService Failed");
-        return -1;
-    }
+    COND_RET_ELOG(ConnMgr::GetInst().StartRpcService("127.0.0.1", 6699) != LLBC_OK, -1,
+                  "ConnMgr StartRpcService failed");
 
-    RpcServiceMgr serviceMgr(&ConnMgr::GetInst());
-    serviceMgr.AddService(new DemoServiceImpl);
+    ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
+    COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
+    RpcServiceMgr::GetInst().AddService(new DemoServiceImpl);
 
     // 死循环处理 rpc 请求
     while (!stop) {
@@ -55,7 +51,7 @@ int main() {
         LLBC_Sleep(1);
     }
 
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "server Stop");
+    LLOG_TRACE("server stop");
 
     return 0;
 }

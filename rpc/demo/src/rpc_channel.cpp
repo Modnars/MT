@@ -106,23 +106,22 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
 
     if (!recvPacket) {
         response->Clear();
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "RecvPacket timeout!");
+        LLOG_ERROR("RecvPacket timeout!");
         return;
     }
 
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "PayLoad(%lu):%s", recvPacket->GetPayloadLength(),
-         reinterpret_cast<const char *>(recvPacket->GetPayload()));
+    LLOG_TRACE("PayLoad(%lu):%s", recvPacket->GetPayloadLength(),
+               reinterpret_cast<const char *>(recvPacket->GetPayload()));
     std::string A, B;
     uint64 srcCoroId;
     recvPacket->Read(A);
     recvPacket->Read(B);
     if (recvPacket->Read(srcCoroId) != LLBC_OK || recvPacket->Read(*response) != LLBC_OK) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Read recvPacket fail");
+        LLOG_ERROR("Read recvPacket fail");
         return;
     }
 
     LLBC_Recycle(recvPacket);
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Recved: %s, extdata: %lu", response->DebugString().c_str(),
-         srcCoroId);
+    LLOG_TRACE("Recved: %s, extdata: %lu", response->DebugString().c_str(), srcCoroId);
 #endif
 }

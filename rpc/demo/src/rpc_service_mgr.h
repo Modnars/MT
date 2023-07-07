@@ -13,6 +13,7 @@
 #include "google/protobuf/message.h"
 #include "google/protobuf/service.h"
 #include "google/protobuf/stubs/common.h"
+#include "mt/util/singleton.h"
 
 namespace llbc {
 class LLBC_Packet;
@@ -35,9 +36,9 @@ int32_t ParseNetPacket(llbc::LLBC_Packet &packet, PkgHead &pkg_head);
 }  // namespace util
 
 class ConnMgr;
-class RpcServiceMgr {
+class RpcServiceMgr : public mt::Singleton<RpcServiceMgr> {
 public:
-    RpcServiceMgr(ConnMgr *connMgr);
+    int Init(ConnMgr *conn_mgr);
     virtual ~RpcServiceMgr();
 
     // 添加服务

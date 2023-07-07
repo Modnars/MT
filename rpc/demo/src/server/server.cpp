@@ -6,6 +6,7 @@
 #include "conn_mgr.h"
 #include "demo_service_impl.h"
 #include "llbc/core/log/LogLevel.h"
+#include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_service_mgr.h"
 
@@ -33,36 +34,28 @@ int main() {
         fmt::print("Initialize logger failed|error: %s\n", LLBC_FormatLastError());
         return -1;
     }
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Hello Server!");
+    LLOG_TRACE("Hello Server!");
 
     ret = ConnMgr::GetInst().Init();
-    if (ret != 0) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "ConnMgr Init failed|ret:%d", ret);
-        return ret;
-    }
+    COND_RET_ELOG(ret != 0, ret, "ConnMgr init failed|ret:%d", ret);
 
     // 启动 rpc 服务
-    if (ConnMgr::GetInst().StartRpcService("127.0.0.1", 6688) != LLBC_OK) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "connMgr StartRpcService Failed");
-        return -1;
-    }
+    COND_RET_ELOG(ConnMgr::GetInst().StartRpcService("127.0.0.1", 6688) != LLBC_OK, -1,
+                  "ConnMgr StartRpcService failed");
 
-    RpcServiceMgr serviceMgr(&ConnMgr::GetInst());
-    serviceMgr.AddService(new DemoServiceImpl);
+    ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
+    COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
+    RpcServiceMgr::GetInst().AddService(new DemoServiceImpl);
 
     bool succ = DemoServiceHelper::GetInst().Init();
-    if (!succ) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "DemoServiceHelper init failed");
-        return 1;
-    }
+    COND_RET_ELOG(!succ, 1, "DemoServiceHelper init failed");
 
-#define REGISTER_SVR_SERVICE(serviceHelper, ip, port, serverId)                                      \
-    {                                                                                                \
-        bool _succ = serviceHelper::GetInst().Register(ip, port, serverId);                          \
-        if (!_succ) {                                                                                \
-            LLOG(nullptr, nullptr, LLBC_LogLevel::Error,                                             \
-                 #serviceHelper " register failed|ip:%s|port:%d|server_id:%lu", ip, port, serverId); \
-        }                                                                                            \
+#define REGISTER_SVR_SERVICE(serviceHelper, ip, port, serverId)                                            \
+    {                                                                                                      \
+        bool _succ = serviceHelper::GetInst().Register(ip, port, serverId);                                \
+        if (!_succ) {                                                                                      \
+            LLOG_ERROR(#serviceHelper " register failed|ip:%s|port:%d|server_id:%lu", ip, port, serverId); \
+        }                                                                                                  \
     }
 
     REGISTER_SVR_SERVICE(DemoServiceHelper, "127.0.0.1", 6688, 0UL);
@@ -76,7 +69,7 @@ int main() {
         LLBC_Sleep(1);
     }
 
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "server Stop");
+    LLOG_TRACE("server stop");
 
     return 0;
 }
