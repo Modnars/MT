@@ -30,11 +30,17 @@ public:
     virtual void SetFailed(const std::string & /* reason */) { }
     virtual bool IsCanceled() const { return false; }
     virtual void NotifyOnCancel(::google::protobuf::Closure * /* callback */) { }
+
+public:
+    void SetUseCoro(bool use_coro) { use_coro_ = use_coro; }
+    bool UseCoro() const { return use_coro_; }
+
     ::google::protobuf::Message *GetRsp() { return rsp_; }
     void SetRsp(::google::protobuf::Message *rsp) { rsp_ = rsp; }
 
 private:
     ::google::protobuf::Message *rsp_;
+    bool use_coro_ = false;  // RPC 是否启用协程，不启用协程时相应协程 ID 字段填充为 0
 };
 
 class RpcChannel : public ::google::protobuf::RpcChannel {
@@ -48,6 +54,7 @@ public:
 
 private:
     int32_t BlockingWaitResponse(::google::protobuf::Message *response);
+    mt::Task<> AwaitResponse(::google::protobuf::Message *response);
 
 private:
     ConnMgr *connMgr_ = nullptr;

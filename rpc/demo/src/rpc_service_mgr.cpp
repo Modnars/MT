@@ -39,6 +39,10 @@ int32_t ParseNetPacket(llbc::LLBC_Packet &packet, PkgHead &pkg_head) {
 
 }  // namespace util
 
+mt::Task<> RpcServiceMgr::DoHandleRpcReq(llbc::LLBC_Packet &packet) {
+    co_return;
+}
+
 int RpcServiceMgr::Init(ConnMgr *conn_mgr) {
     COND_RET_ELOG(connMgr_ != nullptr, -1, "ConnMgr has already been registered|address:%p", connMgr_);
     connMgr_ = conn_mgr;

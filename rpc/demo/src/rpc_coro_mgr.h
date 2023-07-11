@@ -10,6 +10,7 @@
 #pragma once
 
 #include <unordered_map>
+#include "llbc/core/log/LoggerMgr.h"
 
 #include <llbc.h>
 #include <mt/handle.h>
@@ -30,17 +31,17 @@ public:
     bool Suspend(mt::Task<> &&task) { return Suspend(NewCoroUid(), std::move(task)); }
 
     mt::Task<> Pop(coro_uid_type coro_uid) {
-        auto noop = [coro_uid]() -> mt::Task<> {
-            LLOG_ERROR("task not found|coro_uid:%lu", coro_uid);
-            co_return;
-        };
         if (auto iter = suspended_tasks_.find(coro_uid); iter != suspended_tasks_.end()) {
             auto tt = std::move(iter->second);
             suspended_tasks_.erase(iter);
             return tt;
         }
+        LLOG_ERROR("coro_uid not found|coro_uid:%lu", coro_uid);
         return noop();
     }
+
+private:
+    mt::Task<> noop() const { co_return; }
 
 private:
     // map<coro_uid, task>

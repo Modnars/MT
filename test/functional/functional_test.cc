@@ -14,6 +14,8 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <mt/runner.h>
+#include <mt/task.h>
 #include <mt/util/singleton.h>
 
 template <typename _Tp>
@@ -52,10 +54,35 @@ void test_single_pattern_destructor() {
     A::GetInst().foo();
 }
 
+mt::Task<> *resume_ptr = nullptr;
+
+mt::Task<> g() {
+    fmt::print("suspend coro|g\n");
+    co_await std::suspend_always{};
+    fmt::print("coro resume|g\n");
+    co_return;
+}
+
+mt::Task<> func() {
+    auto tt = g();
+    resume_ptr = &tt;
+    co_await tt;
+    fmt::print("coro resume|func\n");
+    co_return;
+}
+
+void test_coro() {
+    mt::run(func());
+    fmt::print("resume_ptr: {}\n", static_cast<const void *>(resume_ptr));
+    if (resume_ptr)
+        mt::run(*resume_ptr);
+}
+
 int main() {
     fmt::print(">>> TEST BEGIN <<<\n");
     test_ranges_oper();
     test_single_pattern_destructor();
+    // test_coro();
     fmt::print(">>> TEST END <<<\n");
     return 0;
 }

@@ -45,6 +45,7 @@ int main() {
     COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
     RpcServiceMgr::GetInst().AddService(new DemoServiceImpl);
 
+    RpcController::GetInst().SetUseCoro(true);  // 服务端启用协程来处理请求
     // 死循环处理 rpc 请求
     while (!stop) {
         ConnMgr::GetInst().Tick();

@@ -1,12 +1,15 @@
 #include <csignal>
+#include <functional>
 #include <iostream>
 
 #include <fmt/core.h>
 #include <llbc.h>
 #include <mt/runner.h>
 
+#include "common/demo.pb.h"
 #include "common/demo_service.pb.h"
 #include "conn_mgr.h"
+#include "google/protobuf/service.h"
 #include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
@@ -21,7 +24,14 @@ void signalHandler(int signum) {
     stop = true;
 }
 
-int main() {
+// TODO modnarshen 改造成一个更通用的 RPC 调用接口
+mt::Task<> RpcEcho(protocol::DemoService_Stub &stub, const protocol::EchoReq *req, protocol::EchoRsp *rsp) {
+    stub.Echo(&RpcController::GetInst(), req, rsp, nullptr);
+    LLOG_INFO("recved rsp: %s", rsp->ShortDebugString().c_str());
+    co_return;
+}
+
+int main(int argc, char *argv[]) {
     // 注册信号 SIGINT 和信号处理程序
     signal(SIGINT, signalHandler);
 
@@ -51,6 +61,7 @@ int main() {
 
     // 创建 rpc controller & stub
     protocol::DemoService_Stub stub{channel};
+    RpcController::GetInst().SetUseCoro(false);  // 客户端默认不用协程，一直阻塞等待回包
 
 #if ENABLE_CXX20_COROUTINE
     // 协程方案, 在新协程中 call rpc
@@ -61,18 +72,8 @@ int main() {
         std::cin >> input;  // 手动阻塞
         if (input != "\n")
             req.set_msg(input.c_str());
-        // 创建协程并 Resume
-        auto func = [&stub, &req, &rsp]() -> mt::Task<> {
-            stub.Echo(&RpcController::GetInst(), &req, &rsp, nullptr);
-            LLOG_INFO("received rsp: %s", rsp.msg().c_str());
-            co_return;
-        };
-        mt::run(func());
-
-        // 处理服务收到的数据包，若有Rpc Rsp，OnUpdate内部会唤醒对应休眠的协程
-        // connMgr->Tick();
+        mt::run(RpcEcho(stub, &req, &rsp));
     }
-
 #else
     // 直接调用方案
     while (!stop) {

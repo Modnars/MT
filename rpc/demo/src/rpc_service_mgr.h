@@ -10,10 +10,11 @@
 
 #include <map>
 
+#include <mt/task.h>
+#include <mt/util/singleton.h>
 #include "google/protobuf/message.h"
 #include "google/protobuf/service.h"
 #include "google/protobuf/stubs/common.h"
-#include "mt/util/singleton.h"
 
 namespace llbc {
 class LLBC_Packet;
@@ -51,6 +52,8 @@ private:
     // 处理 RPC 处理结束
     void OnRpcDone(::google::protobuf::Message *recv_msg, ::google::protobuf::Message *resp_msg,
                    const ::google::protobuf::MethodDescriptor *method = nullptr, uint64_t task_id = 0);
+
+    mt::Task<> DoHandleRpcReq(llbc::LLBC_Packet &packet);
 
 private:
     struct ServiceInfo {
