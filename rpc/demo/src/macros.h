@@ -3,8 +3,7 @@
  * @Date: 2023.06.28 15:04:29
  * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
-#ifndef _RPC_DEMO_SRC_MACROS_H
-#define _RPC_DEMO_SRC_MACROS_H 1
+#pragma once  // 所有 rpc/demo 目录下的代码视为业务代码，采用 pragma 来避免重复 include
 
 #include <llbc.h>
 
@@ -40,6 +39,14 @@
         }                                      \
     }
 
+#define COND_EXP_ELOG(condition, expr, ...) \
+    {                                       \
+        if (condition) [[unlikely]] {       \
+            LLOG_ERROR(__VA_ARGS__);        \
+            expr;                           \
+        }                                   \
+    }
+
 #define CO_COND_RET_TLOG(condition, retCode, ...) \
     {                                             \
         if (condition) {                          \
@@ -71,5 +78,3 @@
             co_return retCode;                    \
         }                                         \
     }
-
-#endif  // _RPC_DEMO_SRC_MACROS_H

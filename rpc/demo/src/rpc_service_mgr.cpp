@@ -64,17 +64,15 @@ bool RpcServiceMgr::RegisterChannel(const char *ip, int32_t port) {
 
 mt::Task<int> RpcServiceMgr::Rpc(std::uint32_t cmd, std::uint64_t uid, const ::google::protobuf::Message &req,
                                  ::google::protobuf::Message *rsp) {
-    LLOG_TRACE("call rpc|uid:%lu|req:%s", uid, req.ShortDebugString().c_str());
+    LLOG_TRACE("call rpc|uid:%lu|req: %s", uid, req.ShortDebugString().c_str());
     assert(!channels_.empty());
 
-    std::uint64_t seq_id = RpcController::GetInst().UseCoro() ? RpcCoroMgr::GetInst().NewCoroUid() : 0UL;
+    std::uint64_t seq_id = RpcCoroMgr::GetInst().NewCoroUid();
     PkgHead pkg_head{.src = 0UL, .dst = 0UL, .uid = uid, .seq = seq_id, .cmd = cmd};
     auto *channel = channels_[uid % channels_.size()];
     channel->Send(pkg_head, req);
 
-    if (rsp) {
-        co_return co_await channel->AwaitResponse(rsp);
-    }
+    COND_EXP(rsp, co_return co_await channel->AwaitResponse(rsp));
     co_return 0;
 }
 
@@ -82,17 +80,6 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 #if ENABLE_CXX20_COROUTINE
     int ret = mt::run(DealRequest(packet));
     COND_RET_ELOG(ret != 0, , "deal request failed|ret:%d", ret);
-    // auto func = [service, method, req, rsp, &pkg_head, this]() -> mt::Task<> {
-    //     LLOG_INFO("[HANDLE_RPC_REQ] COROUTINE CALL FROM C++20");
-    //     service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
-    //     // co_await std::suspend_always{};  // 这里直接挂起
-    //     LLOG_INFO("[HANDLE_RPC_REQ] COROUTINE CALL FROM C++20|RESUME");
-    //     OnRpcDone(req, rsp, method, pkg_head.seq);
-    //     co_return;
-    // };
-    // auto tt = func();
-    // mt::run(tt);
-    // RpcCoroMgr::GetInst().Suspend(std::move(tt));
 #else
     // 直接调用方案
     // 创建 rpc 完成回调函数

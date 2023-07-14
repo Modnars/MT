@@ -9,6 +9,7 @@
 #include "demo_service_impl.h"
 #include "macros.h"
 #include "rpc_channel.h"
+#include "rpc_coro_mgr.h"
 #include "rpc_server.h"
 #include "rpc_service_mgr.h"
 
@@ -50,7 +51,7 @@ int main(int argc, char *argv[]) {
     ret = RpcServer::GetInst().Init();
     COND_RET_ELOG(ret != 0, ret, "RpcServer init failed|ret:%d", ret);
 
-    RpcController::GetInst().SetUseCoro(true);  // 服务端启用协程来处理请求
+    RpcCoroMgr::GetInst().UseCoro(true);  // 服务端启用协程来处理请求
     mt::run(RpcServer::GetInst().serve());
 
     return 0;

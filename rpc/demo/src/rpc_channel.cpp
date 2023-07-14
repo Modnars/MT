@@ -104,7 +104,7 @@ void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
 
 // 协程方案，需填充原始协程 id
 #if ENABLE_CXX20_COROUTINE
-    std::uint64_t coro_uid = RpcController::GetInst().UseCoro() ? RpcCoroMgr::GetInst().NewCoroUid() : 0UL;
+    std::uint64_t coro_uid = RpcCoroMgr::GetInst().NewCoroUid();
     sendPacket->Write(coro_uid);
     LLOG_TRACE("fill coro_uid done|coro_uid:%lu", coro_uid);
 #else
