@@ -1,24 +1,25 @@
 #include <csignal>
+#include <cstdlib>
 
 #include <fmt/core.h>
 #include <llbc.h>
+#include <mt/runner.h>
 
 #include "conn_mgr.h"
 #include "demo_service_impl.h"
 #include "macros.h"
 #include "rpc_channel.h"
+#include "rpc_server.h"
 #include "rpc_service_mgr.h"
 
 using namespace llbc;
 
-bool stop = false;
-
 void signalHandler(int signum) {
     fmt::print("INTERRUPT SIGNAL [{}] RECEIVED.\n", signum);
-    stop = true;
+    RpcServer::GetInst().Stop();
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     // 注册信号 SIGINT 和信号处理程序
     signal(SIGINT, signalHandler);
 
@@ -43,16 +44,14 @@ int main() {
 
     ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
     COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
-    RpcServiceMgr::GetInst().AddService(new DemoServiceImpl);
+    bool succ = RpcServiceMgr::GetInst().AddService(new DemoServiceImpl);
+    COND_RET_ELOG(!succ, EXIT_FAILURE, "add service failed");
+
+    ret = RpcServer::GetInst().Init();
+    COND_RET_ELOG(ret != 0, ret, "RpcServer init failed|ret:%d", ret);
 
     RpcController::GetInst().SetUseCoro(true);  // 服务端启用协程来处理请求
-    // 死循环处理 rpc 请求
-    while (!stop) {
-        ConnMgr::GetInst().Tick();
-        LLBC_Sleep(1);
-    }
-
-    LLOG_TRACE("server stop");
+    mt::run(RpcServer::GetInst().serve());
 
     return 0;
 }

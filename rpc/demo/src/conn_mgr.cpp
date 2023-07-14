@@ -7,47 +7,50 @@
  * @brief:
  */
 #include "conn_mgr.h"
+#include "llbc/common/Define.h"
+#include "llbc/core/log/LoggerMgr.h"
+#include "macros.h"
 #include "rpc_channel.h"
 
 ConnComp::ConnComp() : LLBC_Component(LLBC_ComponentEvents::DefaultEvents | LLBC_ComponentEvents::OnUpdate) { }
 
 bool ConnComp::OnInit(bool &initFinished) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Service create!");
+    LLOG_TRACE("Service create!");
     return true;
 }
 
 void ConnComp::OnDestroy(bool &destroyFinished) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Service destroy!");
+    LLOG_TRACE("Service destroy!");
 }
 
 void ConnComp::OnSessionCreate(const LLBC_SessionInfo &sessionInfo) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Session Create: %s", sessionInfo.ToString().c_str());
+    LLOG_TRACE("Session Create: %s", sessionInfo.ToString().c_str());
 }
 
 void ConnComp::OnSessionDestroy(const LLBC_SessionDestroyInfo &destroyInfo) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Session Destroy, info: %s", destroyInfo.ToString().c_str());
+    LLOG_TRACE("Session Destroy, info: %s", destroyInfo.ToString().c_str());
 }
 
 void ConnComp::OnAsyncConnResult(const LLBC_AsyncConnResult &result) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Async-Conn result: %s", result.ToString().c_str());
+    LLOG_TRACE("Async-Conn result: %s", result.ToString().c_str());
 }
 
 void ConnComp::OnUnHandledPacket(const LLBC_Packet &packet) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Unhandled packet, sessionId: %d, opcode: %d, payloadLen: %ld",
-         packet.GetSessionId(), packet.GetOpcode(), packet.GetPayloadLength());
+    LLOG_TRACE("Unhandled packet, sessionId: %d, opcode: %d, payloadLen: %ld", packet.GetSessionId(),
+               packet.GetOpcode(), packet.GetPayloadLength());
 }
 
 void ConnComp::OnProtoReport(const LLBC_ProtoReport &report) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Proto report: %s", report.ToString().c_str());
+    LLOG_TRACE("Proto report: %s", report.ToString().c_str());
 }
 
 void ConnComp::OnUpdate() {
     auto *sendPacket = sendQueue_.Pop();
     while (sendPacket) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "sendPacket: %s", sendPacket->ToString().c_str());
+        LLOG_TRACE("sendPacket: %s", sendPacket->ToString().c_str());
         auto ret = GetService()->Send(sendPacket);
         if (ret != LLBC_OK) {
-            LLOG(nullptr, nullptr, LLBC_LogLevel::Error, "Send packet failed, err: %s", LLBC_FormatLastError());
+            LLOG_ERROR("Send packet failed, err: %s", LLBC_FormatLastError());
         }
 
         // LLBC_Recycle(sendPacket);
@@ -56,7 +59,7 @@ void ConnComp::OnUpdate() {
 }
 
 void ConnComp::OnRecvPacket(LLBC_Packet &packet) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "OnRecvPacket:%s", packet.ToString().c_str());
+    LLOG_TRACE("OnRecvPacket: %s", packet.ToString().c_str());
     LLBC_Packet *recvPacket = LLBC_GetObjectFromUnsafetyPool<LLBC_Packet>();
     recvPacket->SetHeader(packet, packet.GetOpcode(), 0);
     recvPacket->SetPayload(packet.DetachPayload());
@@ -85,18 +88,15 @@ int ConnMgr::Init() {
     svc_->Subscribe(RpcOpCode::RpcRsp, comp_, &ConnComp::OnRecvPacket);
     svc_->SuppressCoderNotFoundWarning();
     auto ret = svc_->Start(1);
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Service start, ret: %d", ret);
+    LLOG_TRACE("Service start, ret: %d", ret);
     return ret;
 }
 
 int ConnMgr::StartRpcService(const char *ip, int port) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "ConnMgr StartRpcService");
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Server Will listening in %s:%d", ip, port);
+    LLOG_TRACE("ConnMgr StartRpcService");
+    LLOG_TRACE("Server Will listening in %s:%d", ip, port);
     int serverSessionId_ = svc_->Listen(ip, port);
-    if (serverSessionId_ == 0) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Create session failed, reason: %s", LLBC_FormatLastError());
-        return LLBC_FAILED;
-    }
+    COND_RET_ELOG(serverSessionId_ == 0, LLBC_FAILED, "Create session failed, reason: %s", LLBC_FormatLastError())
 
     isServer_ = true;
     return LLBC_OK;
@@ -104,24 +104,20 @@ int ConnMgr::StartRpcService(const char *ip, int port) {
 
 // 创建rpc客户端通信通道
 RpcChannel *ConnMgr::CreateRpcChannel(const char *ip, int port) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CreateRpcChannel");
+    LLOG_TRACE("CreateRpcChannel");
     auto sessionId = svc_->Connect(ip, port);
-    if (sessionId == 0) {
-        LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "Create session failed, reason: %s", LLBC_FormatLastError());
-        return nullptr;
-    }
+    COND_RET_ELOG(sessionId == 0, nullptr, "Create session failed, reason: %s", LLBC_FormatLastError());
 
     return new RpcChannel(this, sessionId);
 }
 
 int ConnMgr::CloseSession(int sessionId) {
-    LLOG(nullptr, nullptr, LLBC_LogLevel::Trace, "CloseSession, %d", sessionId);
+    LLOG_TRACE("CloseSession, %d", sessionId);
     return svc_->RemoveSession(sessionId);
 }
 
 bool ConnMgr::Tick() {
     auto ret = false;
-    // LLOG(nullptr, nullptr, LLBC_LogLevel::Warn, "Tick");
     // 读取接收到的数据包并给对应的订阅者处理
     auto packet = PopPacket();
     while (packet) {
@@ -129,7 +125,7 @@ bool ConnMgr::Tick() {
         LLOG_INFO("Tick");
         auto it = packetDelegs_.find(packet->GetOpcode());
         if (it == packetDelegs_.end())
-            LLOG(nullptr, nullptr, LLBC_LogLevel::Warn, "Recv Untapped opcode:%d", packet->GetOpcode());
+            LLOG_WARN("Recv Untapped opcode:%d", packet->GetOpcode());
         else
             (it->second)(*packet);
 
@@ -143,10 +139,7 @@ bool ConnMgr::Tick() {
 
 int ConnMgr::Subscribe(int cmdId, const LLBC_Delegate<void(LLBC_Packet &)> &deleg) {
     auto pair = packetDelegs_.emplace(cmdId, deleg);
-    if (!pair.second) {
-        return LLBC_FAILED;
-    }
-
+    COND_RET(!pair.second, LLBC_FAILED);
     return LLBC_OK;
 }
 

@@ -4,11 +4,15 @@
  * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <coroutine>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <random>
+#include <set>
+#include <unordered_map>
 #include <vector>
 
 #include <fmt/core.h>
@@ -78,11 +82,68 @@ void test_coro() {
         mt::run(*resume_ptr);
 }
 
+std::unordered_map<std::uint64_t, mt::Task<>> global_tasks;
+std::set<std::uint64_t> done_tasks;
+
+static constexpr std::uint64_t TEST_NUM = 10UL;
+static constexpr std::uint64_t STEP = 50UL;
+
+mt::Task<> call(std::uint64_t task_id) {
+    fmt::print("task is call|task_id:{}\n", task_id);
+    co_await std::suspend_always{};
+    fmt::print("task is resume|task_id:{}\n", task_id);
+    co_return;
+}
+
+void test_suspend() {
+    for (std::uint64_t i = 0; done_tasks.size() != TEST_NUM; ++i) {
+        std::uint64_t task_id = i % TEST_NUM;
+        COND_EXP(auto iter = done_tasks.find(task_id); iter != done_tasks.end(), continue);
+        if (auto iter = global_tasks.find(task_id); iter != global_tasks.end()) {
+            mt::run(iter->second);
+            global_tasks.erase(iter);
+            done_tasks.insert(task_id);
+        } else {
+            auto t = call(task_id);
+            mt::run(t);
+            global_tasks.insert({task_id, std::move(t)});
+        }
+    }
+}
+
+using call_back = std::function<mt::Task<>(int)>;
+
+mt::Task<> mainloop(call_back func) {
+    int i = 0;
+    while (true) {
+        ++i;
+        mt::run(func(i));
+        COND_EXP(i >= 10, break);
+    }
+    co_return;
+}
+
+mt::Task<> coro(int val) {
+    fmt::print("call task|val = {}\n", val);
+    co_await std::suspend_always{};
+    if (auto iter = global_tasks.find(9999); iter != global_tasks.end())
+        mt::run(iter->second);
+    co_return;
+}
+
+void test_transfer() {
+    global_tasks.insert({9999, mainloop(coro)});
+    if (auto iter = global_tasks.find(9999); iter != global_tasks.end())
+        mt::run(iter->second);
+}
+
 int main() {
     fmt::print(">>> TEST BEGIN <<<\n");
     test_ranges_oper();
     test_single_pattern_destructor();
     // test_coro();
+    test_suspend();
+    test_transfer();
     fmt::print(">>> TEST END <<<\n");
     return 0;
 }

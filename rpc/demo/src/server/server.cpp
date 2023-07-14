@@ -1,25 +1,25 @@
 #include <csignal>
+#include <cstdlib>
 
 #include <fmt/core.h>
-#include "llbc.h"
+#include <llbc.h>
+#include <mt/runner.h>
 
 #include "conn_mgr.h"
 #include "demo_service_impl.h"
-#include "llbc/core/log/LogLevel.h"
 #include "macros.h"
 #include "rpc_channel.h"
+#include "rpc_server.h"
 #include "rpc_service_mgr.h"
 
 using namespace llbc;
 
-bool stop = false;
-
 void signalHandler(int signum) {
     fmt::print("INTERRUPT SIGNAL [{}] RECEIVED.\n", signum);
-    stop = true;
+    RpcServer::GetInst().Stop();
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     // 注册信号 SIGINT 和信号处理程序
     signal(SIGINT, signalHandler);
 
@@ -45,32 +45,26 @@ int main() {
 
     ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
     COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
-    RpcServiceMgr::GetInst().AddService(new DemoServiceImpl);
+    bool succ = RpcServiceMgr::GetInst().AddService(new DemoServiceImpl);
+    COND_RET_ELOG(!succ, EXIT_FAILURE, "add service failed");
 
-    bool succ = DemoServiceHelper::GetInst().Init();
-    COND_RET_ELOG(!succ, 1, "DemoServiceHelper init failed");
-
-#define REGISTER_SVR_SERVICE(serviceHelper, ip, port, serverId)                                            \
-    {                                                                                                      \
-        bool _succ = serviceHelper::GetInst().Register(ip, port, serverId);                                \
-        if (!_succ) {                                                                                      \
-            LLOG_ERROR(#serviceHelper " register failed|ip:%s|port:%d|server_id:%lu", ip, port, serverId); \
-        }                                                                                                  \
+#define REGISTER_RPC_CHANNEL(ip, port)                                                          \
+    {                                                                                           \
+        bool _succ = RpcServiceMgr::GetInst().RegisterChannel(ip, port);                        \
+        COND_RET_ELOG(!_succ, EXIT_FAILURE, "register channel failed|ip:%s|port:%d", ip, port); \
+        LLOG_INFO("register channel succ|ip:%s|port:%d", ip, port);                             \
     }
 
-    REGISTER_SVR_SERVICE(DemoServiceHelper, "127.0.0.1", 6688, 0UL);
-    REGISTER_SVR_SERVICE(DemoServiceHelper, "127.0.0.1", 6699, 1UL);
+    REGISTER_RPC_CHANNEL("127.0.0.1", 6688);
+    REGISTER_RPC_CHANNEL("127.0.0.1", 6699);
 
-#undef REGISTER_SVR_SERVICE
+#undef REGISTER_RPC_CHANNEL
+
+    ret = RpcServer::GetInst().Init();
+    COND_RET_ELOG(ret != 0, ret, "RpcServer init failed|ret:%d", ret);
 
     RpcController::GetInst().SetUseCoro(true);  // 服务端启用协程来处理请求
-    // 死循环处理 rpc 请求
-    while (!stop) {
-        ConnMgr::GetInst().Tick();
-        LLBC_Sleep(1);
-    }
-
-    LLOG_TRACE("server stop");
+    mt::run(RpcServer::GetInst().serve());
 
     return 0;
 }

@@ -7,7 +7,7 @@ project(${TARGET_NAME}
         VERSION ${PROJECT_VERSION}
         LANGUAGES CXX)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -Wall -Werror")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -Wall -Werror -g")
 set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 message(CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
