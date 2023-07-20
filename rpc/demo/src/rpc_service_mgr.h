@@ -23,6 +23,26 @@ namespace llbc {
 class LLBC_Packet;
 }
 
+class CtxController : public ::google::protobuf::RpcController {
+public:
+    CtxController(void *continuation) : continuation_(continuation) { }
+    ~CtxController() { }
+
+    virtual void Reset() { }
+    virtual bool Failed() const { return false; }
+    virtual std::string ErrorText() const { return ""; }
+    virtual void StartCancel() { }
+    virtual void SetFailed(const std::string & /* reason */) { }
+    virtual bool IsCanceled() const { return false; }
+    virtual void NotifyOnCancel(::google::protobuf::Closure * /* callback */) { }
+
+    void *GetContinuation() const { return continuation_; }
+    void SetContinuation(void *continuation) { continuation_ = continuation; }
+
+private:
+    void *continuation_ = nullptr;  // 恢复执行的协程挂起点
+};
+
 class ConnMgr;
 class RpcServiceMgr : public mt::Singleton<RpcServiceMgr> {
 public:
@@ -52,9 +72,8 @@ private:
     void OnRpcDone(const PkgHead &pkg_head, const ::google::protobuf::Message &rsp);
 
 private:
-    ConnMgr *connMgr_ = nullptr;
-    int sessionId_ = 0;
-    int serviceId_ = 0;
+    ConnMgr *conn_mgr_ = nullptr;
+    int session_id_ = 0;  // 收发包时缓存的 session_id
 
     std::vector<RpcChannel *> channels_;
     std::unordered_map<std::uint32_t, pb_service_method> services_;

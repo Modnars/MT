@@ -58,14 +58,14 @@ public:
     int ToPacket(llbc::LLBC_Packet &packet) const;
     const std::string &ToString() const {
         static std::string buffer(MAX_BUFFER_SIZE, '\0');
-        ::snprintf(buffer.data(), MAX_BUFFER_SIZE, "src:%u|dst:%u|uid:%lu|seq:%lu|cmd:%08X", src, dst, uid, seq, cmd);
+        ::snprintf(buffer.data(), MAX_BUFFER_SIZE, "src:%u|dst:%u|uid:%lu|seq:%lu|cmd:0X%08X", src, dst, uid, seq, cmd);
         return buffer;
     }
 };
 
 class RpcController : public ::google::protobuf::RpcController, public mt::Singleton<RpcController> {
 public:
-    RpcController() : rsp_(nullptr) { }
+    RpcController() = default;
     ~RpcController() { }
     virtual void Reset() { }
     virtual bool Failed() const { return false; }
@@ -74,13 +74,6 @@ public:
     virtual void SetFailed(const std::string & /* reason */) { }
     virtual bool IsCanceled() const { return false; }
     virtual void NotifyOnCancel(::google::protobuf::Closure * /* callback */) { }
-
-public:
-    ::google::protobuf::Message *GetRsp() { return rsp_; }
-    void SetRsp(::google::protobuf::Message *rsp) { rsp_ = rsp; }
-
-private:
-    ::google::protobuf::Message *rsp_;
 };
 
 class RpcChannel : public ::google::protobuf::RpcChannel {

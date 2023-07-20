@@ -137,13 +137,164 @@ void test_transfer() {
         mt::run(iter->second);
 }
 
+void test_task_done() {
+    auto func = []() -> mt::Task<int> {
+        fmt::print("task start\n");
+        co_await std::suspend_always{};
+        fmt::print("task resume\n");
+        co_return 100;
+    };
+    auto t = func();
+    fmt::print("[1]|valid:{}|done:{}\n", t.valid(), t.valid() && t.done());
+    mt::run(t);
+    fmt::print("[2]|valid:{}|done:{}\n", t.valid(), t.valid() && t.done());
+    mt::run(t);
+    fmt::print("[3]|valid:{}|done:{}\n", t.valid(), t.valid() && t.done());
+}
+
+void inner_func() {
+    auto coro = []() -> mt::Task<> {
+        fmt::print("coro start\n");
+        co_await std::suspend_always{};
+        fmt::print("coro resume\n");
+        co_return;
+    };
+}
+
+std::set<int> ids_1;
+
+using data_pair = std::pair<void *, std::string *>;
+std::unordered_map<std::uint64_t, data_pair> suspend_coros;
+void *global_main_addr_ = nullptr;
+
+struct CoroAwaiter {
+public:
+    CoroAwaiter(std::uint64_t id, std::string *msg) : id_(id), msg_(msg) { }
+    CoroAwaiter() : CoroAwaiter(0UL, nullptr) { }
+    bool await_ready() const noexcept { return false; }
+
+    bool await_suspend(std::coroutine_handle<> handle) {
+        // continuation_ = handle.address();
+        if (id_ == 0 && msg_ == nullptr) {
+            global_main_addr_ = handle.address();
+            return false;
+        }
+        suspend_coros.insert({id_, {handle.address(), msg_}});
+        return true;
+    }
+
+    void *await_resume() noexcept { return continuation_; }
+
+private:
+    void *continuation_;
+    std::uint64_t id_ = 0UL;
+    std::string *msg_ = nullptr;
+};
+
+struct CurrCoroAwaiter {
+public:
+    bool await_ready() const noexcept { return false; }
+
+    bool await_suspend(std::coroutine_handle<> handle) {
+        continuation_ = handle.address();
+        return false;
+    }
+
+    void *await_resume() noexcept { return continuation_; }
+
+private:
+    void *continuation_;
+};
+
+mt::Task<> subcoro(int id, std::string m) {
+    fmt::print("enter call|id:{}|msg:{}\n", id, m);
+    std::string msg = m;
+    co_await CoroAwaiter{static_cast<std::uint64_t>(id), &msg};
+    // std::coroutine_handle<>::from_address(global_main_addr_).resume();
+    // co_await std::suspend_always{};
+    fmt::print("resume coro|id:{}|msg:{}\n", id, msg);
+    co_return;
+}
+
+mt::Task<> mainloop() {
+    // global_main_addr_ = co_await CurrCoroAwaiter{};
+    co_await CoroAwaiter{};
+    fmt::print("main_addr:{}\n", global_main_addr_);
+    auto t = subcoro(1, "Hello");
+    mt::run(t);
+    // co_await t;
+    fmt::print("resume to mainloop\n");
+    for (const auto &kv : suspend_coros) {
+        fmt::print("{} {} {}\n", kv.first, kv.second.first, *kv.second.second);
+    }
+    fmt::print("valid:{} done:{}\n", t.valid(), t.done());
+    // if (t.valid() && !t.done()) {
+    //     // mt::run(t);
+    //     co_await t;
+    // }
+    std::coroutine_handle<mt::Task<>::promise_type>::from_address(suspend_coros[1].first).resume();
+    co_return;
+}
+
+void test_task_resume() {
+    mt::run(mainloop());
+}
+
+void *point_1 = nullptr;
+void *ptr_main_1 = nullptr;
+
+struct CtxAwaiter {
+    bool await_ready() const noexcept { return false; }
+
+    bool await_suspend(std::coroutine_handle<> handle) {
+        point_1 = handle.address();
+        fmt::print("point1:{}\n", point_1);
+        return true;
+    }
+
+    void *await_resume() noexcept { return continuation_; }
+
+private:
+    void *continuation_;
+};
+
+mt::Task<> func1() {
+    fmt::print("func1\n");
+    co_await CtxAwaiter{};
+    fmt::print("func1 resume\n");
+    co_return;
+}
+
+mt::Task<> func2() {
+    fmt::print("func2\n");
+    co_await func1();
+    fmt::print("func2 resume\n");
+    co_return;
+}
+
+mt::Task<> test_inner_call_suspend(int) {
+    ptr_main_1 = co_await CurrCoroAwaiter{};
+    mt::run(func2());
+    std::coroutine_handle<>::from_address(point_1).resume();
+    co_return;
+}
+
+void test_inner_call_suspend() {
+    mt::run(test_inner_call_suspend(1));
+}
+
+// TODO modnarshen 测试挂起点
+
 int main() {
     fmt::print(">>> TEST BEGIN <<<\n");
-    test_ranges_oper();
-    test_single_pattern_destructor();
+    // test_ranges_oper();
+    // test_single_pattern_destructor();
     // test_coro();
-    test_suspend();
-    test_transfer();
+    // test_suspend();
+    // test_transfer();
+    // test_task_done();
+    // test_task_resume();
+    test_inner_call_suspend();
     fmt::print(">>> TEST END <<<\n");
     return 0;
 }
