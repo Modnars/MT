@@ -10,6 +10,8 @@
 
 #include "common/error_code.pb.h"
 
+static const std::string SERVER_LLOG_CONF_PATH = "../../config/server_log.cfg";
+
 struct RpcServer : public mt::Singleton<RpcServer> {
 public:
     int Init() {

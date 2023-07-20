@@ -1,4 +1,5 @@
 #include <csignal>
+#include <cstdlib>
 #include <functional>
 #include <iostream>
 
@@ -19,6 +20,7 @@
 using namespace llbc;
 
 bool stop = false;
+static const std::string CLIENT_LLOG_CONF_PATH = "../../config/client_log.cfg";
 
 void signalHandler(int signum) {
     fmt::print("INTERRUPT SIGNAL [{}] RECEIVED.\n", signum);
@@ -58,8 +60,11 @@ int main(int argc, char *argv[]) {
     LLBC_Defer(LLBC_Cleanup());
 
     // 初始化日志
-    auto ret = LLBC_LoggerMgrSingleton->Initialize("log/cfg/server_log.cfg");
-    COND_RET_ELOG(ret != LLBC_OK, -1, "init logger failed|error: %s", LLBC_FormatLastError());
+    auto ret = LLBC_LoggerMgrSingleton->Initialize(CLIENT_LLOG_CONF_PATH);
+    if (ret == LLBC_FAILED) {
+        fmt::print("Initialize logger failed|path:{}|error: {}\n", CLIENT_LLOG_CONF_PATH, LLBC_FormatLastError());
+        return EXIT_FAILURE;
+    }
 
     // 初始化连接管理器
     ret = ConnMgr::GetInst().Init();
