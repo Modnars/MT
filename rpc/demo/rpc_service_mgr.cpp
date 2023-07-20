@@ -15,7 +15,7 @@
 #include <mt/runner.h>
 #include <mt/task.h>
 
-#include "common/error_code.pb.h"
+#include "error_code.pb.h"
 #include "conn_mgr.h"
 #include "demo_service_impl.h"
 #include "google/protobuf/message.h"

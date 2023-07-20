@@ -7,9 +7,9 @@
 #include <llbc.h>
 #include <mt/runner.h>
 
-#include "common/demo.pb.h"
-#include "common/demo_service.pb.h"
 #include "conn_mgr.h"
+#include "demo.pb.h"
+#include "demo_service.pb.h"
 #include "demo_service_impl.h"
 #include "google/protobuf/service.h"
 #include "macros.h"

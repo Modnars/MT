@@ -2,16 +2,16 @@ PROJECT(rpc-demo)
 cmake_minimum_required(VERSION 3.17)
 
 include_directories(
-    ${PROTOCOL_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${3RD_DIR}/protobuf-2.6.1/include
+    ${PROTOCOL_DIR}/common
+    ${PROTOCOL_DIR}/inner
+    ${PROTOBUF_ROOT_DIR}/include
     ${3RD_DIR}/llbc/llbc/include)
 link_directories(
-    ${3RD_DIR}/protobuf-2.6.1/lib
+    ${PROTOBUF_ROOT_DIR}/lib
     ${3RD_DIR}/llbc/output/gmake/release64)
 
 # 生成协议 proto 的 .pb.h 和 .pb.cc 文件
-set(PROTOC_TOOL ${3RD_DIR}/protobuf-2.6.1/bin/protoc)  # 其他平台构建时需要修改 PROTOC 路径
 file(GLOB protocol_file_list ${PROTOCOL_COMMON_DIR}/*.proto ${PROTOCOL_INNER_DIR}/*.proto)
 foreach(_file ${protocol_file_list})
     string(REPLACE ".proto" ".pb.h" file_h ${_file})

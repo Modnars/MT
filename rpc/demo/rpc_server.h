@@ -8,7 +8,7 @@
 #include <mt/task.h>
 #include <mt/util/singleton.h>
 
-#include "common/error_code.pb.h"
+#include "error_code.pb.h"
 
 static const std::string SERVER_LLOG_CONF_PATH = "../../config/server_log.cfg";
 

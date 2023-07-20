@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+import "cmd.proto";
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.ServiceOptions {
+    // 整个service是否是内部私有
+    bool IS_ALL_PRIVATE = 20001;
+    // service的前缀名字
+    string ALL_PREFIX_NAME = 20002;
+}
+
+// 跨服广播标志
+enum BroadcastWorld {
+    BROADCAST_NONE = 0;              // 无
+    BROADCAST_WORLD_LOBBY = 255;     // 跨world向所有looby集群广播
+}
+
+
+extend google.protobuf.MethodOptions {
+    // rpc对应的cmd
+    protocol.RpcCmd RPC_CMD = 20000;
+    // 超时时间，毫秒
+    uint32 TIME_OUT = 20001;
+    // 是否内部私有rpc
+    bool IS_PRIVATE = 20002;
+    // 是否接受广播
+    bool IS_BROADCAST = 20003;
+    // 单个method的service前缀
+    string PREFIX_NAME = 20004;
+    // 添加编译宏控制
+    string WITH_MACRO = 20005;
+    // 跨world广播
+    BroadcastWorld WORLD_BROADCAST = 20006;
+}
+

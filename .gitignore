@@ -16,4 +16,5 @@ rpc/demo/CMakeFiles
 rpc/demo/CMakeCache.txt
 rpc/demo/Makefile
 rpc/demo/core*
-rpc/demo/bin
+
+bin

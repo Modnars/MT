@@ -13,9 +13,9 @@
 #include <mt/util/macros.h>
 #include <mt/util/singleton.h>
 
-#include "common/demo.pb.h"
-#include "common/demo_service.pb.h"
 #include "conn_mgr.h"
+#include "demo.pb.h"
+#include "demo_service.pb.h"
 #include "macros.h"
 #include "rpc_channel.h"
 

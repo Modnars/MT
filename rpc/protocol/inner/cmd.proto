@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package protocol;
+
+enum RpcCmd {
+    NONE_CMD = 0x0;
+
+    // DemoService
+    DEMO_SERVICE_ECHO = 0x01000001;
+}
+

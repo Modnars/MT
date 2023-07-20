@@ -11,8 +11,8 @@
 #include <llbc.h>
 #include <mt/runner.h>
 
-#include "common/demo.pb.h"
-#include "common/error_code.pb.h"
+#include "demo.pb.h"
+#include "error_code.pb.h"
 #include "conn_mgr.h"
 #include "macros.h"
 #include "rpc_channel.h"
