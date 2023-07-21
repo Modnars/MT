@@ -6,7 +6,7 @@
 #include <mt/runner.h>
 
 #include "conn_mgr.h"
-#include "demo_service_impl.h"
+#include "demo_service.pb.h"
 #include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 
     ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
     COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
-    bool succ = RpcServiceMgr::GetInst().AddService(new DemoServiceImpl);
+    bool succ = RpcServiceMgr::GetInst().AddService(new protocol::DemoServiceImpl);
     COND_RET_ELOG(!succ, EXIT_FAILURE, "add service failed");
 
 #define REGISTER_RPC_CHANNEL(ip, port)                                                          \

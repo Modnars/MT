@@ -23,6 +23,16 @@ decltype(auto) run(_Task &&task) {
     }
 }
 
+template <typename _Task>
+decltype(auto) sync_await(_Task &&task) {
+    task.run();
+    if constexpr (std::is_lvalue_reference_v<_Task &&>) {
+        return task.result();
+    } else {
+        return std::move(task).result();
+    }
+}
+
 }  // namespace mt
 
 #endif  // _MT_RUNNER_H

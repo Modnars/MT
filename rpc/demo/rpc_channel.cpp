@@ -67,7 +67,7 @@ int RpcChannel::BlockingWaitResponse(::google::protobuf::Message *response) {
     if (!recv_packet) {
         response->Clear();
         LLOG_ERROR("receive packet timeout!");
-        return protocol::ErrorCode::RECV_PKG_TIME_OUT;
+        return protocol::ErrorCode::RPC_TIMEOUT;
     }
 
     LLOG_TRACE("Payload info|length:%lu|info: %s", recv_packet->GetPayloadLength(), recv_packet->ToString().c_str());

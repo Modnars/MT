@@ -9,6 +9,7 @@
 #pragma once
 
 #include <map>
+#include <unordered_map>
 
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
@@ -46,7 +47,15 @@ private:
 class ConnMgr;
 class RpcServiceMgr : public mt::Singleton<RpcServiceMgr> {
 public:
-    using pb_service_method = std::pair<::google::protobuf::Service *, const ::google::protobuf::MethodDescriptor *>;
+    using CoMethodFunc = std::function<mt::Task<int>(
+        const ::google::protobuf::MethodDescriptor *method, ::google::protobuf::RpcController *controller,
+        const ::google::protobuf::Message &request, ::google::protobuf::Message &response,
+        ::google::protobuf::Closure *done)>;
+    struct ServiceMethod {
+        ::google::protobuf::Service *service = nullptr;
+        const ::google::protobuf::MethodDescriptor *method = nullptr;
+        CoMethodFunc co_func = nullptr;
+    };
 
 public:
     int Init(ConnMgr *conn_mgr);
@@ -54,7 +63,8 @@ public:
 
 public:
     // 添加服务
-    bool AddService(::google::protobuf::Service *service);
+    template <typename _Service>
+    bool AddService(_Service *service);
     bool RegisterChannel(const char *ip, int32_t port);
 
     mt::Task<int> Rpc(std::uint32_t cmd, std::uint64_t uid, const ::google::protobuf::Message &req,
@@ -76,5 +86,25 @@ private:
     int session_id_ = 0;  // 收发包时缓存的 session_id
 
     std::vector<RpcChannel *> channels_;
-    std::unordered_map<std::uint32_t, pb_service_method> services_;
+    std::unordered_map<std::uint32_t, ServiceMethod> service_methods_;
 };  // RpcServiceMgr
+
+template <typename _Service>
+bool RpcServiceMgr::AddService(_Service *service) {
+    static std::uint32_t cmd = 0U;  // TODO modnarshen fix me
+    const auto *service_desc = service->GetDescriptor();
+    for (int i = 0; i < service_desc->method_count(); ++i) {
+        bool succ = service_methods_
+                        .insert({++cmd,
+                                 {.service = service,
+                                  .method = service_desc->method(i),
+                                  .co_func = std::bind(&_Service::CallCoMethod, service, std::placeholders::_1,
+                                                       std::placeholders::_2, std::placeholders::_3,
+                                                       std::placeholders::_4, std::placeholders::_5)}})
+                        .second;
+        COND_RET_ELOG(!succ, false, "add service failed|cmd:%u|method:%s", cmd,
+                      service_desc->method(i)->full_name().c_str());
+    }
+
+    return true;
+}

@@ -52,6 +52,9 @@ public:
     std::coroutine_handle<> MainHandle() const { return main_handle_; }
     void SetMainHandle(std::coroutine_handle<> handle) { main_handle_ = handle; }
 
+public:
+    std::coroutine_handle<> temp_handle{};
+
 private:
     std::unordered_map<coro_uid_type, context> suspended_contexts_;
     // coro_uid generator, which could generate unique id without `0`.
@@ -63,8 +66,6 @@ private:
 struct MainCoroAwaiter {
 public:
     MainCoroAwaiter(bool is_main) : is_main_(is_main) { }
-    // MainCoroAwaiter(RpcCoroMgr::coro_uid_type coro_uid, ::google::protobuf::Message *rsp)
-    //     : coro_uid_(coro_uid), rsp_(rsp) { }
     MainCoroAwaiter(RpcCoroMgr::coro_uid_type coro_uid, RpcCoroMgr::context context)
         : coro_uid_(coro_uid), context_(context) { }
 
@@ -76,9 +77,8 @@ public:
             RpcCoroMgr::GetInst().SetMainHandle(handle);
             return handle;
         }
-        LLOG_INFO("suspend coro|coro_uid:%lu|%p|rsp:%p", coro_uid_, handle.address(), rsp_);
+        LLOG_INFO("suspend coro|coro_uid:%lu|%p|rsp:%p", coro_uid_, handle.address(), context_.rsp);
         context_.handle = handle;
-        // RpcCoroMgr::GetInst().Suspend(coro_uid_, {.handle = handle, .rsp = rsp_});
         RpcCoroMgr::GetInst().Suspend(coro_uid_, context_);
         return RpcCoroMgr::GetInst().MainHandle();
     }
@@ -89,5 +89,4 @@ private:
     bool is_main_ = false;
     RpcCoroMgr::coro_uid_type coro_uid_ = 0UL;
     RpcCoroMgr::context context_;
-    ::google::protobuf::Message *rsp_ = nullptr;
 };

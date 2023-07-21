@@ -29,7 +29,9 @@
 #include <google/protobuf/repeated_field.h>  // IWYU pragma: export
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/service.h>
+
 #include "demo.pb.h"
+
 #include "mt/task.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
@@ -71,10 +73,6 @@ class DemoService : public ::PROTOBUF_NAMESPACE_ID::Service {
                        const ::protocol::EchoReq* request,
                        ::protocol::EchoRsp* response,
                        ::google::protobuf::Closure* done);
-  virtual mt::Task<int> Echo(::PROTOBUF_NAMESPACE_ID::RpcController* controller,
-                       const ::protocol::EchoReq& equest,
-                       ::protocol::EchoRsp& response,
-                       ::google::protobuf::Closure* done);
 
   // implements Service ----------------------------------------------
 
@@ -83,11 +81,6 @@ class DemoService : public ::PROTOBUF_NAMESPACE_ID::Service {
                   ::PROTOBUF_NAMESPACE_ID::RpcController* controller,
                   const ::PROTOBUF_NAMESPACE_ID::Message* request,
                   ::PROTOBUF_NAMESPACE_ID::Message* response,
-                  ::google::protobuf::Closure* done);
-  mt::Task<int> CallMethod(const ::PROTOBUF_NAMESPACE_ID::MethodDescriptor* method,
-                  ::PROTOBUF_NAMESPACE_ID::RpcController* controller,
-                  const ::PROTOBUF_NAMESPACE_ID::Message& request,
-                  ::PROTOBUF_NAMESPACE_ID::Message& response,
                   ::google::protobuf::Closure* done);
   const ::PROTOBUF_NAMESPACE_ID::Message& GetRequestPrototype(
     const ::PROTOBUF_NAMESPACE_ID::MethodDescriptor* method) const;
@@ -121,6 +114,26 @@ class DemoService_Stub : public DemoService {
 
 
 // ===================================================================
+
+class DemoServiceImpl : public DemoService {
+protected:
+  mt::Task<int> Echo(::PROTOBUF_NAMESPACE_ID::RpcController* controller,
+                     const ::protocol::EchoReq& equest,
+                     ::protocol::EchoRsp& response,
+                     ::google::protobuf::Closure* done);
+private:
+  virtual void Echo(::PROTOBUF_NAMESPACE_ID::RpcController* controller,
+                    const ::protocol::EchoReq* request,
+                    ::protocol::EchoRsp* response,
+                    ::google::protobuf::Closure* done);
+
+public:
+  mt::Task<int> CallCoMethod(const ::PROTOBUF_NAMESPACE_ID::MethodDescriptor* method,
+                  ::PROTOBUF_NAMESPACE_ID::RpcController* controller,
+                  const ::PROTOBUF_NAMESPACE_ID::Message& request,
+                  ::PROTOBUF_NAMESPACE_ID::Message& response,
+                  ::google::protobuf::Closure* done);
+};
 
 
 // ===================================================================

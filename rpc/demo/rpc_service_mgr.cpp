@@ -15,10 +15,11 @@
 #include <mt/runner.h>
 #include <mt/task.h>
 
-#include "error_code.pb.h"
 #include "conn_mgr.h"
 #include "demo_service_impl.h"
+#include "error_code.pb.h"
 #include "google/protobuf/message.h"
+#include "llbc/core/log/LoggerMgr.h"
 #include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
@@ -43,18 +44,18 @@ RpcServiceMgr::~RpcServiceMgr() {
     }
 }
 
-bool RpcServiceMgr::AddService(::google::protobuf::Service *service) {
-    // TODO modnarshen 改用一个从 service 获取 option 的方式来注册 cmd
-    static std::uint32_t cmd = 0U;
+// bool RpcServiceMgr::AddService(::google::protobuf::Service *service) {
+//     // TODO modnarshen 改用一个从 service 获取 option 的方式来注册 cmd
+//     static std::uint32_t cmd = 0U;
 
-    const auto *service_desc = service->GetDescriptor();
-    for (int i = 0; i < service_desc->method_count(); ++i) {
-        bool succ = services_.insert({++cmd, {service, service_desc->method(i)}}).second;
-        COND_RET_ELOG(!succ, false, "add service failed|cmd:%u|service:%s", cmd,
-                      service_desc->method(i)->full_name().c_str());
-    }
-    return true;
-}
+//     const auto *service_desc = service->GetDescriptor();
+//     for (int i = 0; i < service_desc->method_count(); ++i) {
+//         bool succ = services_.insert({++cmd, {service, service_desc->method(i)}}).second;
+//         COND_RET_ELOG(!succ, false, "add service failed|cmd:%u|service:%s", cmd,
+//                       service_desc->method(i)->full_name().c_str());
+//     }
+//     return true;
+// }
 
 bool RpcServiceMgr::RegisterChannel(const char *ip, int32_t port) {
     auto *channel = conn_mgr_->CreateRpcChannel(ip, port);
@@ -98,10 +99,10 @@ mt::Task<int> RpcServiceMgr::DealRequest(llbc::LLBC_Packet packet) {
     CO_COND_RET_ELOG(ret != 0, ret, "pkg_head.FromPacket failed|ret:%d", ret);
     session_id_ = packet.GetSessionId();
 
-    auto iter = services_.find(pkg_head.cmd);
-    CO_COND_RET_ELOG(iter == services_.end(), -1, "service and method not found|cmd:%08X", pkg_head.cmd);
-    auto *service = iter->second.first;
-    const auto *method = iter->second.second;
+    auto iter = service_methods_.find(pkg_head.cmd);
+    CO_COND_RET_ELOG(iter == service_methods_.end(), -1, "service and method not found|cmd:%08X", pkg_head.cmd);
+    auto *service = iter->second.service;
+    const auto *method = iter->second.method;
     // 解析 req & 创建 rsp
     auto *req = service->GetRequestPrototype(method).New();
     auto *rsp = service->GetResponsePrototype(method).New();
@@ -112,8 +113,11 @@ mt::Task<int> RpcServiceMgr::DealRequest(llbc::LLBC_Packet packet) {
     // TODO modnarshen 这里的 done 传递的是引用，可能要确定下回调执行时，引用的实例是否还存在
     // auto done = ::google::protobuf::NewCallback<RpcServiceMgr, const PkgHead &, const ::google::protobuf::Message &>(
     //     &RpcServiceMgr::GetInst(), &RpcServiceMgr::OnRpcDone, pkg_head, *rsp);
-    ret = co_await reinterpret_cast<protocol::DemoService *>(service)->CallMethod(method, &RpcController::GetInst(),
-                                                                                  *req, *rsp, nullptr);
+
+    assert(iter->second.co_func);
+    ret = co_await iter->second.co_func(method, &RpcController::GetInst(), *req, *rsp, nullptr);
+    // service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
+    LLOG_ERROR("should to here");
     CO_COND_RET_ELOG(ret != 0, ret, "call method failed|ret:%d", ret);
     OnRpcDone(pkg_head, *rsp);
 
@@ -128,19 +132,8 @@ mt::Task<int> RpcServiceMgr::DealResonse(llbc::LLBC_Packet packet) {
 
     auto coro_uid = static_cast<RpcCoroMgr::coro_uid_type>(pkg_head.seq);
     auto ctx = RpcCoroMgr::GetInst().Pop(coro_uid);
-    if (ctx.handle == nullptr || ctx.rsp == nullptr) {
-        auto iter = services_.find(pkg_head.cmd);
-        CO_COND_RET_ELOG(iter == services_.end(), -1, "service and method not found|cmd:%08X", pkg_head.cmd);
-        auto *service = iter->second.first;
-        const auto *method = iter->second.second;
-        // 解析 req & 创建 rsp
-        auto *rsp = service->GetResponsePrototype(method).New();
-        LLOG_TRACE("packet: %s", packet.ToString().c_str());
-        ret = packet.Read(*rsp);
-        CO_COND_RET_ELOG(ret != LLBC_OK, ret, "read req failed|ret:%d|reason: %s", ret, LLBC_FormatLastError());
-        LLOG_INFO("rsp: %s", rsp->ShortDebugString().c_str());
-        co_return -1;
-    }
+    CO_COND_RET_ELOG(ctx.handle == nullptr || ctx.rsp == nullptr, protocol::ErrorCode::FAILURE,
+                     "coro context not found|cmd:0x%08X|seq_id:%lu", pkg_head.cmd, coro_uid);
     // 解析 rsp
     ret = packet.Read(*ctx.rsp);
     CO_COND_RET_ELOG(ret != LLBC_OK, ret, "read rsp failed|ret:%d", ret);

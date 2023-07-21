@@ -15,6 +15,8 @@
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 
+#include "mt/runner.h"
+
 PROTOBUF_PRAGMA_INIT_SEG
 
 namespace _pb = ::PROTOBUF_NAMESPACE_ID;
@@ -72,37 +74,6 @@ void DemoService::Echo(::PROTOBUF_NAMESPACE_ID::RpcController* controller,
                          ::google::protobuf::Closure* done) {
   controller->SetFailed("Method Echo() not implemented.");
   done->Run();
-}
-
-mt::Task<int> DemoService::Echo(::PROTOBUF_NAMESPACE_ID::RpcController* controller,
-                         const ::protocol::EchoReq&,
-                         ::protocol::EchoRsp&,
-                         ::google::protobuf::Closure* done) {
-  controller->SetFailed("Method Echo() not implemented.");
-  done->Run();
-  co_return 0;
-}
-
-mt::Task<int> DemoService::CallMethod(const ::PROTOBUF_NAMESPACE_ID::MethodDescriptor* method,
-                             ::PROTOBUF_NAMESPACE_ID::RpcController* controller,
-                             const ::PROTOBUF_NAMESPACE_ID::Message& request,
-                             ::PROTOBUF_NAMESPACE_ID::Message& response,
-                             ::google::protobuf::Closure* done) {
-  GOOGLE_DCHECK_EQ(method->service(), file_level_service_descriptors_demo_5fservice_2eproto[0]);
-  switch(method->index()) {
-    case 0:
-      co_return co_await Echo(controller,
-             *::PROTOBUF_NAMESPACE_ID::internal::DownCast<const ::protocol::EchoReq*>(
-                 &request),
-             *::PROTOBUF_NAMESPACE_ID::internal::DownCast<::protocol::EchoRsp*>(
-                 &response),
-             done);
-      break;
-    default:
-      GOOGLE_LOG(FATAL) << "Bad method index; this should never happen.";
-      break;
-  }
-  co_return 0;
 }
 
 void DemoService::CallMethod(const ::PROTOBUF_NAMESPACE_ID::MethodDescriptor* method,
@@ -169,6 +140,32 @@ void DemoService_Stub::Echo(::PROTOBUF_NAMESPACE_ID::RpcController* controller,
                               ::google::protobuf::Closure* done) {
   channel_->CallMethod(descriptor()->method(0),
                        controller, request, response, done);
+}
+
+void DemoServiceImpl::Echo(::PROTOBUF_NAMESPACE_ID::RpcController* controller,
+                  const ::protocol::EchoReq* request,
+                  ::protocol::EchoRsp* response,
+                  ::google::protobuf::Closure* done) {
+  mt::run(Echo(controller, *request, *response, done));
+}
+
+mt::Task<int> DemoServiceImpl::CallCoMethod(const ::PROTOBUF_NAMESPACE_ID::MethodDescriptor *method,
+                                            ::PROTOBUF_NAMESPACE_ID::RpcController *controller,
+                                            const ::PROTOBUF_NAMESPACE_ID::Message &request,
+                                            ::PROTOBUF_NAMESPACE_ID::Message &response,
+                                            ::google::protobuf::Closure *done) {
+  GOOGLE_DCHECK_EQ(method->service(), file_level_service_descriptors_demo_5fservice_2eproto[0]);
+  switch(method->index()) {
+    case 0:
+      co_return co_await Echo(controller,
+             *::PROTOBUF_NAMESPACE_ID::internal::DownCast<const ::protocol::EchoReq*>(&request),
+             *::PROTOBUF_NAMESPACE_ID::internal::DownCast<::protocol::EchoRsp*>(&response), done);
+      break;
+    default:
+      GOOGLE_LOG(FATAL) << "Bad method index; this should never happen.";
+      break;
+  }
+  co_return 0;
 }
 
 // @@protoc_insertion_point(namespace_scope)

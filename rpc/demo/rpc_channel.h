@@ -58,7 +58,7 @@ public:
     int ToPacket(llbc::LLBC_Packet &packet) const;
     const std::string &ToString() const {
         static std::string buffer(MAX_BUFFER_SIZE, '\0');
-        ::snprintf(buffer.data(), MAX_BUFFER_SIZE, "src:%u|dst:%u|uid:%lu|seq:%lu|cmd:0X%08X", src, dst, uid, seq, cmd);
+        ::snprintf(buffer.data(), MAX_BUFFER_SIZE, "src:%u|dst:%u|uid:%lu|seq:%lu|cmd:0x%08X", src, dst, uid, seq, cmd);
         return buffer;
     }
 };

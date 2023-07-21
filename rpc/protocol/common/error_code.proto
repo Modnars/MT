@@ -6,6 +6,7 @@ enum ErrorCode {
     SUCCESS = 0;
     FAILURE = -1;
 
-    RECV_PKG_TIME_OUT = -1000;
-    PARSE_PKG_FAILED = -1001;
+    RPC_TIMEOUT = -1000;            // RPC 调用超时
+    PARSE_PKG_FAILED = -1001;       // 解析网络包失败
+    RECVED_TIMEOUT_PKG = -1002;     // 收到了超时的网络包
 }

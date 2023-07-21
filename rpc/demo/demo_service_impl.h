@@ -21,16 +21,6 @@
 
 // ==================== PERF: AUTO GENERATE FROM PROTOC BEGIN ====================
 
-class DemoServiceImpl : public protocol::DemoService {
-public:
-    void Echo(::google::protobuf::RpcController *controller, const ::protocol::EchoReq *req, ::protocol::EchoRsp *rsp,
-              ::google::protobuf::Closure *done) override;
-
-    mt::Task<int> Echo(::google::protobuf::RpcController *controller, const ::protocol::EchoReq &req,
-                       ::protocol::EchoRsp &rsp, ::google::protobuf::Closure *done) override;
-
-};  // DemoServiceImpl
-
 class DemoServiceStub {
 public:
     static mt::Task<int> Echo(std::uint64_t uid, const ::protocol::EchoReq &req, ::protocol::EchoRsp *rsp = nullptr);

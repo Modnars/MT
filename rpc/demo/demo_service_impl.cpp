@@ -21,20 +21,15 @@ using namespace llbc;
 
 // ==================== PERF: AUTO GENERATE FROM PROTOC BEGIN ====================
 
-void DemoServiceImpl::Echo(::google::protobuf::RpcController *controller, const ::protocol::EchoReq *req,
-                           ::protocol::EchoRsp *rsp, ::google::protobuf::Closure *done) {
-    auto ret = mt::run(Echo(controller, *req, *rsp, done));
-    COND_RET_ELOG(ret != 0, , "coroutine exec failed|ret:%d", ret);
-}
-
 mt::Task<int> DemoServiceStub::Echo(std::uint64_t uid, const ::protocol::EchoReq &req, ::protocol::EchoRsp *rsp) {
     co_return co_await RpcServiceMgr::GetInst().Rpc(0x00000001U, uid, req, rsp);
 }
 
 // ==================== PERF: AUTO GENERATE FROM PROTOC END ====================
 
-mt::Task<int> DemoServiceImpl::Echo(::google::protobuf::RpcController *controller, const ::protocol::EchoReq &req,
-                                    ::protocol::EchoRsp &rsp, ::google::protobuf::Closure *done) {
+mt::Task<int> protocol::DemoServiceImpl::Echo(::google::protobuf::RpcController *controller,
+                                              const ::protocol::EchoReq &req, ::protocol::EchoRsp &rsp,
+                                              ::google::protobuf::Closure *done) {
     LLOG_TRACE("req: %s", req.ShortDebugString().c_str());
     if (req.msg().size() > 0UL && req.msg()[0UL] != 'A') {
         protocol::EchoReq inner_req;
