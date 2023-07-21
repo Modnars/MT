@@ -16,7 +16,6 @@
 #include <mt/task.h>
 
 #include "conn_mgr.h"
-#include "demo_service_impl.h"
 #include "error_code.pb.h"
 #include "google/protobuf/message.h"
 #include "llbc/core/log/LoggerMgr.h"

@@ -365,7 +365,7 @@ void PbCoCodeGenerator::GenStubMethodImpl(std::stringstream &ss, const std::stri
            << g_indent << "if (timeout == 0U)\n"
            << g_indent << g_indent << "timeout = " << std::dec << timeout << "U;\n"
            << g_indent << "co_return co_await RpcServiceMgr::GetInst().Rpc(0x" << std::hex
-           << method->options().GetExtension(RPC_CMD) << ", uid, request, response, timeout);\n";
+           << method->options().GetExtension(RPC_CMD) << "U, uid, request, response, timeout);\n";
     }
     ss << "}\n";
     ADD_ENDIF(macro_str, ss);

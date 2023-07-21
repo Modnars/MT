@@ -11,7 +11,7 @@
 
 #include "conn_mgr.h"
 #include "demo.pb.h"
-#include "demo_service_impl.h"
+#include "demo_service.pb.h"
 #include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
