@@ -35,4 +35,4 @@ target_link_libraries(${PROJECT_NAME}
     pthread
     )
 
-set(EXECUTABLE_OUTPUT_PATH "${TOOLS_DIR}/bin")
+set(EXECUTABLE_OUTPUT_PATH "${RPC_TOOLS_DIR}/bin")

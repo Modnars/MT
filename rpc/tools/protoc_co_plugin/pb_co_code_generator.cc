@@ -3,6 +3,9 @@
  * @Date: 2023.07.20 11:47:54
  * @Note: Copyrights (c) 2023 modnarshen. All rights reserved.
  */
+#include <cstddef>
+#include <google/protobuf/descriptor.h>
+
 #include "pb_co_code_generator.h"
 #include "rpc_options.pb.h"
 
@@ -20,7 +23,7 @@
         }                         \
     }
 
-static const std::string g_indent = "    ";
+static const std::string g_indent = "  ";
 static const uint32_t g_default_timeout = 5000;
 
 void PbCoCodeGenerator::CollectHeadFile(const ::google::protobuf::FileDescriptor *file,
@@ -53,6 +56,7 @@ std::string PbCoCodeGenerator::GetHeaderIncludeStr(const std::string &base_path,
     prefix_str += "/";
 
     std::string include_str;
+    include_str += "#include \"mt/task.h\"\n";
     std::for_each(need_head_file.begin(), need_head_file.end(), [&](auto &&str) {
         include_str += prefix_str;
         include_str += str;
@@ -68,6 +72,8 @@ std::string PbCoCodeGenerator::GetSourceIncludeStr(const std::string &base_path,
     prefix_str += "/";
 
     std::string include_str;
+    include_str += "#include \"mt/runner.h\"\n";
+    include_str += "#include \"rpc_service_mgr.h\"\n";
     std::for_each(need_head_file.begin(), need_head_file.end(), [&](auto &&str) {
         include_str += prefix_str;
         include_str += str;
@@ -104,64 +110,37 @@ std::string PbCoCodeGenerator::GenRpcImpl(const ::google::protobuf::FileDescript
 
 void PbCoCodeGenerator::GenServiceDecl(std::stringstream &ss, const ::google::protobuf::ServiceDescriptor *service,
                                        const std::string &name_prefix) const {
-    // 同步的base类
-    ss << "class " << service->name() << "Base : public " << service->name() << "\n"
-       << "{\n"
+    // C++20 协程接口类
+    ss << "class " << service->name() << "Impl : public " << service->name() << "{\n"
        << "protected:\n";
     for (int i = 0; i < service->method_count(); ++i) {
         std::string class_name_prefix = service->method(i)->options().GetExtension(PREFIX_NAME);
         if (class_name_prefix.empty())
-            GenServiceProtectedMethodDecl(ss, service->method(i), false, name_prefix);
+            GenCoServiceProtectedMethodDecl(ss, service->method(i), false, name_prefix);
         else
-            GenServiceProtectedMethodDecl(ss, service->method(i), false, class_name_prefix);
+            GenCoServiceProtectedMethodDecl(ss, service->method(i), false, class_name_prefix);
     }
-    ss << "private:\n";
+    ss << "\nprivate:\n";
     for (int i = 0; i < service->method_count(); ++i) {
-        GenServicePrivateMethodDecl(ss, service->method(i));
+        GenCoServicePrivateMethodDecl(ss, service->method(i));
     }
-    ss << "};\n";
-
-    ss << "\n";
-
-    // 异步的base类
-    ss << "class " << service->name() << "AsyncBase : public " << service->name() << "\n"
-       << "{\n"
-       << "protected:\n";
-    for (int i = 0; i < service->method_count(); ++i) {
-        std::string class_name_prefix = service->method(i)->options().GetExtension(PREFIX_NAME);
-        if (class_name_prefix.empty())
-            GenServiceProtectedMethodDecl(ss, service->method(i), true, name_prefix);
-        else
-            GenServiceProtectedMethodDecl(ss, service->method(i), true, class_name_prefix);
-    }
-    ss << "private:\n";
-    for (int i = 0; i < service->method_count(); ++i) {
-        GenServicePrivateMethodDecl(ss, service->method(i));
-    }
+    ss << "\npublic:\n";
+    GenCoServicePublicMethodDecl(ss);
     ss << "};\n";
 }
 
 void PbCoCodeGenerator::GenServiceImpl(std::stringstream &ss, const ::google::protobuf::ServiceDescriptor *service,
                                        const std::string &name_prefix) const {
-    // 同步接口的实现
+    // C++20 协程同步接口的实现
     for (int i = 0; i < service->method_count(); ++i) {
         std::string class_name_prefix = service->method(i)->options().GetExtension(PREFIX_NAME);
         if (class_name_prefix.empty())
-            GenServiceMethodImpl(ss, service->name() + "Base", service->method(i), false, name_prefix);
+            GenCoServiceMethodImpl(ss, service->name() + "Impl", service->method(i), false, name_prefix);
         else
-            GenServiceMethodImpl(ss, service->name() + "Base", service->method(i), false, class_name_prefix);
+            GenCoServiceMethodImpl(ss, service->name() + "Impl", service->method(i), false, class_name_prefix);
         ss << "\n";
     }
-
-    // 异步接口的实现
-    for (int i = 0; i < service->method_count(); ++i) {
-        std::string class_name_prefix = service->method(i)->options().GetExtension(PREFIX_NAME);
-        if (class_name_prefix.empty())
-            GenServiceMethodImpl(ss, service->name() + "AsyncBase", service->method(i), true, name_prefix);
-        else
-            GenServiceMethodImpl(ss, service->name() + "AsyncBase", service->method(i), true, class_name_prefix);
-        ss << "\n";
-    }
+    GenCoServicePublicMethodImpl(ss, service->name() + "Impl", service);
 }
 
 void PbCoCodeGenerator::GenServiceProtectedMethodDecl(std::stringstream &ss,
@@ -179,15 +158,45 @@ void PbCoCodeGenerator::GenServiceProtectedMethodDecl(std::stringstream &ss,
     ADD_ENDIF(macro_str, ss);
 }
 
+void PbCoCodeGenerator::GenCoServiceProtectedMethodDecl(std::stringstream &ss,
+                                                        const ::google::protobuf::MethodDescriptor *method,
+                                                        bool is_async, const std::string &name_prefix) const {
+    std::string macro_str = method->options().GetExtension(WITH_MACRO);
+    const std::size_t indent_num = 23UL + method->name().size();
+    ADD_IFDEF(macro_str, ss);
+    ss << g_indent << "virtual mt::Task<int> " << method->name() << "(::google::protobuf::RpcController* controller,\n"
+       << g_indent << std::string(indent_num, ' ') << "const " << method->input_type()->name() << "& request, "
+       << method->output_type()->name() << "& response,\n"
+       << g_indent << std::string(indent_num, ' ') << "::google::protobuf::Closure *done);\n";
+
+    ADD_ENDIF(macro_str, ss);
+}
+
 void PbCoCodeGenerator::GenServicePrivateMethodDecl(std::stringstream &ss,
                                                     const ::google::protobuf::MethodDescriptor *method) const {
     std::string macro_str = method->options().GetExtension(WITH_MACRO);
     ADD_IFDEF(macro_str, ss);
+    const std::size_t indent_num = 14UL + method->name().size();
     ss << g_indent << "virtual void " << method->name() << "(::google::protobuf::RpcController* controller,\n"
-       << g_indent << g_indent << "const " << method->input_type()->name() << "* req,\n"
-       << g_indent << g_indent << method->output_type()->name() << "* rsp,\n"
-       << g_indent << g_indent << "::google::protobuf::Closure* done) final;\n";
+       << g_indent << std::string(indent_num, ' ') << "const " << method->input_type()->name() << "* request, "
+       << method->output_type()->name() << "* response,\n"
+       << g_indent << std::string(indent_num, ' ') << "::google::protobuf::Closure* done);\n";
     ADD_ENDIF(macro_str, ss);
+}
+
+void PbCoCodeGenerator::GenCoServicePrivateMethodDecl(std::stringstream &ss,
+                                                      const ::google::protobuf::MethodDescriptor *method) const {
+    GenServicePrivateMethodDecl(ss, method);
+}
+
+void PbCoCodeGenerator::GenCoServicePublicMethodDecl(std::stringstream &ss) const {
+    const std::size_t indent_num = 27UL;
+    ss << g_indent << "mt::Task<int> CallCoMethod(const ::google::protobuf::MethodDescriptor* method,\n"
+       << g_indent << std::string(indent_num, ' ') << "::google::protobuf::RpcController* controller,\n"
+       << g_indent << std::string(indent_num, ' ') << "const ::google::protobuf::Message& request,\n"
+       << g_indent << std::string(indent_num, ' ') << "::google::protobuf::Message& response,\n"
+       << g_indent << std::string(indent_num, ' ') << "::google::protobuf::Closure* done);";
+    return;
 }
 
 void PbCoCodeGenerator::GenServiceMethodImpl(std::stringstream &ss, const std::string &class_name,
@@ -212,10 +221,56 @@ void PbCoCodeGenerator::GenServiceMethodImpl(std::stringstream &ss, const std::s
     ADD_ENDIF(macro_str, ss);
 }
 
+void PbCoCodeGenerator::GenCoServiceMethodImpl(std::stringstream &ss, const std::string &class_name,
+                                               const ::google::protobuf::MethodDescriptor *method, bool is_async,
+                                               const std::string &name_prefix) const {
+    std::string macro_str = method->options().GetExtension(WITH_MACRO);
+    ADD_IFDEF(macro_str, ss);
+    const std::size_t indent_num = class_name.size() + method->name().size() + 8UL;
+    ss << "void " << class_name << "::" << method->name() << "(::google::protobuf::RpcController* controller,\n"
+       << std::string(indent_num, ' ') << "const " << method->input_type()->name() << "* request, "
+       << method->output_type()->name() << "* response,\n"
+       << std::string(indent_num, ' ') << "::google::protobuf::Closure* done) {\n";
+
+    if (is_async) {
+        ss << g_indent << "context->ret_code = " << method->name() << "(*req, *rsp, context);\n";
+    } else {
+        ss << g_indent << "mt::run(" << method->name() << "(controller, *request, *response, done));\n";
+    }
+    ss << "}\n";
+    ADD_ENDIF(macro_str, ss);
+    return;
+}
+
+void PbCoCodeGenerator::GenCoServicePublicMethodImpl(std::stringstream &ss, const std::string &class_name,
+                                                     const ::google::protobuf::ServiceDescriptor *service) const {
+    std::size_t indent_num = class_name.size() + 29UL;
+    ss << "mt::Task<int> " << class_name << "::"
+       << "CallCoMethod(const ::google::protobuf::MethodDescriptor* method,\n"
+       << std::string(indent_num, ' ') << "::google::protobuf::RpcController* controller,\n"
+       << std::string(indent_num, ' ') << "const ::google::protobuf::Message& request,\n"
+       << std::string(indent_num, ' ') << "::google::protobuf::Message& response,\n"
+       << std::string(indent_num, ' ') << "::google::protobuf::Closure* done) {\n";
+    ss << g_indent << "switch(method->index()) {\n";
+    for (int idx = 0; idx < service->method_count(); ++idx) {
+        auto *method = service->method(idx);
+        ss << g_indent << g_indent << "case " << idx << ":\n"
+           << g_indent << g_indent << g_indent << "co_return co_await " << method->name() << "(controller,\n"
+           << g_indent << g_indent << g_indent << g_indent << g_indent
+           << "*::google::protobuf::internal::DownCast<const " << method->input_type()->name() << "*>(&request),\n"
+           << g_indent << g_indent << g_indent << g_indent << g_indent
+           << "*::google::protobuf::internal::DownCast<" << method->output_type()->name() << "*>(&response), done);\n"
+           << g_indent << g_indent << g_indent << "break;\n";
+    }
+    ss << g_indent << g_indent << "default:\n"
+       << g_indent << g_indent << g_indent << "GOOGLE_LOG(FATAL) << \"Bad method index; this should never happen.\";\n"
+       << g_indent << g_indent << g_indent << "break;\n";
+    ss << g_indent << "}\n" << g_indent << "co_return 0;\n}\n";
+}
+
 void PbCoCodeGenerator::GenStubDecl(std::stringstream &ss, const ::google::protobuf::ServiceDescriptor *service,
                                     const std::string &name_prefix) const {
-    ss << "class " << service->name() << "Stub\n"
-       << "{\n"
+    ss << "class " << service->name() << "Stub {\n"
        << "public:\n";
     for (int i = 0; i < service->method_count(); ++i) {
         std::string class_name_prefix = service->method(i)->options().GetExtension(PREFIX_NAME);
@@ -223,14 +278,6 @@ void PbCoCodeGenerator::GenStubDecl(std::stringstream &ss, const ::google::proto
             GenStubMethodDecl(ss, service->method(i), name_prefix);
         else
             GenStubMethodDecl(ss, service->method(i), class_name_prefix);
-    }
-    ss << "\n";
-    for (int i = 0; i < service->method_count(); ++i) {
-        std::string class_name_prefix = service->method(i)->options().GetExtension(PREFIX_NAME);
-        if (class_name_prefix.empty())
-            GenStubAsyncMethodDecl(ss, service->method(i), name_prefix);
-        else
-            GenStubAsyncMethodDecl(ss, service->method(i), class_name_prefix);
     }
     ss << "};\n";
 }
@@ -245,34 +292,21 @@ void PbCoCodeGenerator::GenStubImpl(std::stringstream &ss, const ::google::proto
             GenStubMethodImpl(ss, service->name() + "Stub", service->method(i), class_name_prefix);
         ss << "\n";
     }
-
-    for (int i = 0; i < service->method_count(); ++i) {
-        std::string class_name_prefix = service->method(i)->options().GetExtension(PREFIX_NAME);
-        if (class_name_prefix.empty())
-            GenStubAsyncMethodImpl(ss, service->name() + "Stub", service->method(i), name_prefix);
-        else
-            GenStubAsyncMethodImpl(ss, service->name() + "Stub", service->method(i), class_name_prefix);
-        ss << "\n";
-    }
 }
 
 void PbCoCodeGenerator::GenStubMethodDecl(std::stringstream &ss, const ::google::protobuf::MethodDescriptor *method,
                                           const std::string &name_prefix) const {
     std::string macro_str = method->options().GetExtension(WITH_MACRO);
     ADD_IFDEF(macro_str, ss);
-    if (name_prefix == "Http") {
-        ss << g_indent << "static int32_t " << method->name() << "(const " << method->input_type()->name() << "& req, "
-           << method->output_type()->name() << "* rsp = nullptr, bool need_encode = false, uint32_t timeout = 0);\n";
+    const std::size_t indent_num = 22UL + method->name().size();
+    if (method->options().GetExtension(IS_BROADCAST) || method->options().GetExtension(WORLD_BROADCAST)) {
+        ss << g_indent << "static int32_t " << method->name() << "(uint64_t gid, const " << method->input_type()->name()
+           << "& req);\n";
     } else {
-        if (method->options().GetExtension(IS_BROADCAST) || method->options().GetExtension(WORLD_BROADCAST)) {
-            ss << g_indent << "static int32_t " << method->name() << "(uint64_t gid, const "
-               << method->input_type()->name() << "& req);\n";
-        } else {
-            ss << g_indent << "static int32_t " << method->name() << "(uint64_t gid, const "
-               << method->input_type()->name() << "& req, " << method->output_type()->name()
-               << "* rsp = nullptr, uint32_t dest_id = 0, const Context::Callback& callback = nullptr, uint32_t "
-                  "timeout = 0);\n";
-        }
+        ss << g_indent << "static mt::Task<int> " << method->name() << "(std::uint64_t uid,\n"
+           << g_indent << std::string(indent_num, ' ') << "const " << method->input_type()->name() << "& request, "
+           << method->output_type()->name() << "* response = nullptr,\n"
+           << g_indent << std::string(indent_num, ' ') << "std::uint32_t timeout = 0);\n";
     }
     ADD_ENDIF(macro_str, ss);
 }
@@ -309,48 +343,31 @@ void PbCoCodeGenerator::GenStubMethodImpl(std::stringstream &ss, const std::stri
                                           const std::string &name_prefix) const {
     std::string macro_str = method->options().GetExtension(WITH_MACRO);
     ADD_IFDEF(macro_str, ss);
-    if (name_prefix == "Http") {
+    bool is_broadcast = method->options().GetExtension(IS_BROADCAST);
+    uint32_t broadcast_world = method->options().GetExtension(WORLD_BROADCAST);
+    if (is_broadcast || broadcast_world) {
+        ss << "int32_t " << class_name << "::" << method->name() << "(uint64_t gid, const "
+           << method->input_type()->name() << "& req)\n"
+           << "{\n"
+           << g_indent << "return ua::" << name_prefix << "Service::GetInst().Rpc(gid, 0x" << std::hex
+           << method->options().GetExtension(RPC_CMD) << ", req"
+           << ", nullptr, nullptr, nullptr, GetCrossWorldDest(0x" << broadcast_world << "), true";
+    } else {
         uint32_t timeout = g_default_timeout;
         if (method->options().HasExtension(TIME_OUT))
             timeout = method->options().GetExtension(TIME_OUT);
 
-        ss << "int32_t " << class_name << "::" << method->name() << "(const " << method->input_type()->name()
-           << "& req, " << method->output_type()->name() << "* rsp, bool need_encode, uint32_t timeout)\n"
-           << "{\n"
-           << g_indent << "if (timeout == 0)\n"
-           << g_indent << g_indent << "timeout = " << std::dec << timeout << ";\n"
-           << g_indent << "return ua::HttpService::GetInst().Rpc("
-           << "req"
-           << ", rsp, nullptr, nullptr, need_encode, timeout);\n"
-           << "}\n";
-    } else {
-        bool is_broadcast = method->options().GetExtension(IS_BROADCAST);
-        uint32_t broadcast_world = method->options().GetExtension(WORLD_BROADCAST);
-        if (is_broadcast || broadcast_world) {
-            ss << "int32_t " << class_name << "::" << method->name() << "(uint64_t gid, const "
-               << method->input_type()->name() << "& req)\n"
-               << "{\n"
-               << g_indent << "return ua::" << name_prefix << "Service::GetInst().Rpc(gid, 0x" << std::hex
-               << method->options().GetExtension(RPC_CMD) << ", req"
-               << ", nullptr, nullptr, nullptr, GetCrossWorldDest(0x" << broadcast_world << "), true";
-        } else {
-            uint32_t timeout = g_default_timeout;
-            if (method->options().HasExtension(TIME_OUT))
-                timeout = method->options().GetExtension(TIME_OUT);
-
-            ss << "int32_t " << class_name << "::" << method->name() << "(uint64_t gid, const "
-               << method->input_type()->name() << "& req, " << method->output_type()->name()
-               << "* rsp, uint32_t dest_id, const Context::Callback& callback, uint32_t timeout)\n"
-               << "{\n"
-               << g_indent << "if (timeout == 0)\n"
-               << g_indent << g_indent << "timeout = " << std::dec << timeout << ";\n"
-               << g_indent << "return ua::" << name_prefix << "Service::GetInst().Rpc(gid, 0x" << std::hex
-               << method->options().GetExtension(RPC_CMD) << ", req"
-               << ", rsp, callback, nullptr, dest_id, false, timeout";
-        }
-        ss << ");\n"
-           << "}\n";
+        std::size_t indent_num = class_name.size() + method->name().size() + 17UL;
+        ss << "mt::Task<int> " << class_name << "::" << method->name() << "(std::uint64_t uid,\n"
+           << std::string(indent_num, ' ') << "const " << method->input_type()->name() << "& request, "
+           << method->output_type()->name() << "* response,\n"
+           << std::string(indent_num, ' ') << "std::uint32_t timeout) {\n"
+           << g_indent << "if (timeout == 0U)\n"
+           << g_indent << g_indent << "timeout = " << std::dec << timeout << "U;\n"
+           << g_indent << "co_return co_await RpcServiceMgr::GetInst().Rpc(0x" << std::hex
+           << method->options().GetExtension(RPC_CMD) << ", uid, request, response, timeout);\n";
     }
+    ss << "}\n";
     ADD_ENDIF(macro_str, ss);
 }
 

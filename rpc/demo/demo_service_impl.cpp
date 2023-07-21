@@ -19,14 +19,6 @@
 
 using namespace llbc;
 
-// ==================== PERF: AUTO GENERATE FROM PROTOC BEGIN ====================
-
-mt::Task<int> DemoServiceStub::Echo(std::uint64_t uid, const ::protocol::EchoReq &req, ::protocol::EchoRsp *rsp) {
-    co_return co_await RpcServiceMgr::GetInst().Rpc(0x00000001U, uid, req, rsp);
-}
-
-// ==================== PERF: AUTO GENERATE FROM PROTOC END ====================
-
 mt::Task<int> protocol::DemoServiceImpl::Echo(::google::protobuf::RpcController *controller,
                                               const ::protocol::EchoReq &req, ::protocol::EchoRsp &rsp,
                                               ::google::protobuf::Closure *done) {

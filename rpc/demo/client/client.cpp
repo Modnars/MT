@@ -10,7 +10,6 @@
 #include "conn_mgr.h"
 #include "demo.pb.h"
 #include "demo_service.pb.h"
-#include "demo_service_impl.h"
 #include "google/protobuf/service.h"
 #include "macros.h"
 #include "rpc_channel.h"
@@ -37,17 +36,9 @@ mt::Task<> mainloop() {
         COND_EXP(!(std::cin >> input), break);  // 手动阻塞
         COND_EXP(input == "exit", break);
         req.set_msg(input);
-        auto ret = co_await DemoServiceStub::Echo(0UL, req, &rsp);
+        auto ret = co_await protocol::DemoServiceStub::Echo(0UL, req, &rsp);
         COND_EXP_ELOG(ret != 0, continue, "call Stub::method failed|ret:%d", ret);
     }
-    co_return;
-}
-
-// TODO modnarshen 改造成一个更通用的 RPC 调用接口
-mt::Task<> RpcEcho(std::uint64_t uid, const protocol::EchoReq *req, protocol::EchoRsp *rsp) {
-    auto ret = co_await DemoServiceStub::Echo(uid, *req, rsp);
-    CO_COND_RET_ELOG(ret != 0, , "call DemoServiceStub::Echo failed|ret:%d", ret);
-    LLOG_INFO("recved rsp: %s", rsp->ShortDebugString().c_str());
     co_return;
 }
 

@@ -65,7 +65,7 @@ bool RpcServiceMgr::RegisterChannel(const char *ip, int32_t port) {
 }
 
 mt::Task<int> RpcServiceMgr::Rpc(std::uint32_t cmd, std::uint64_t uid, const ::google::protobuf::Message &req,
-                                 ::google::protobuf::Message *rsp) {
+                                 ::google::protobuf::Message *rsp, std::uint32_t timeout) {
     LLOG_TRACE("call rpc|uid:%lu|req: %s", uid, req.ShortDebugString().c_str());
     assert(!channels_.empty());
 
@@ -117,7 +117,6 @@ mt::Task<int> RpcServiceMgr::DealRequest(llbc::LLBC_Packet packet) {
     assert(iter->second.co_func);
     ret = co_await iter->second.co_func(method, &RpcController::GetInst(), *req, *rsp, nullptr);
     // service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
-    LLOG_ERROR("should to here");
     CO_COND_RET_ELOG(ret != 0, ret, "call method failed|ret:%d", ret);
     OnRpcDone(pkg_head, *rsp);
 

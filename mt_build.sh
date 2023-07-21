@@ -15,9 +15,4 @@ else
 fi
 
 mkdir -p ${build_dir} && cd ${build_dir}
-# cmake .. && make -j10
-cmake ..
-echo ">>> try to use .m.pb.xx replace .pb.xx"
-cp ../rpc/protocol/inner/demo_service.m.pb.h ../rpc/protocol/inner/demo_service.pb.h
-cp ../rpc/protocol/inner/demo_service.m.pb.cc ../rpc/protocol/inner/demo_service.pb.cc
-make -j10
+cmake .. && make -j10

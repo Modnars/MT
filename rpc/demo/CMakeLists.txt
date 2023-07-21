@@ -19,9 +19,9 @@ foreach(_file ${protocol_file_list})
 	get_filename_component(_dir ${_file} DIRECTORY)
     add_custom_command(
             OUTPUT ${file_cc} ${file_h}
-            COMMAND ${PROTOC_TOOL} --cpp_out=${_dir} --proto_path=${PROTOCOL_COMMON_DIR}:${PROTOCOL_INNER_DIR} ${_file}
-            DEPENDS ${_file} 
-            COMMENT "Generating protobuf files for ${_file}"
+            COMMAND ${PROTOC_TOOL} --cpp_out=${_dir} --rpc_out=${_dir} --proto_path=${PROTOCOL_COMMON_DIR}:${PROTOCOL_INNER_DIR} --plugin=protoc-gen-rpc=${PROTOC_RPC_PLUGIN} ${_file}
+            DEPENDS ${_file} ${PROTOC_RPC_PLUGIN}
+            COMMENT "Generating protobuf files for ${_file} ${COMMAND}"
     )
     list(APPEND PB_FILES ${file_cc})
 endforeach()

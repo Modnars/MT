@@ -83,6 +83,16 @@ private:
                               const ::google::protobuf::MethodDescriptor *method, bool is_async,
                               const std::string &name_prefix) const;
 
+    void GenCoServiceProtectedMethodDecl(std::stringstream &ss, const ::google::protobuf::MethodDescriptor *method,
+                                         bool is_async, const std::string &name_prefix) const;
+    void GenCoServicePrivateMethodDecl(std::stringstream &ss, const ::google::protobuf::MethodDescriptor *method) const;
+    void GenCoServicePublicMethodDecl(std::stringstream &ss) const;
+    void GenCoServiceMethodImpl(std::stringstream &ss, const std::string &class_name,
+                                const ::google::protobuf::MethodDescriptor *method, bool is_async,
+                                const std::string &name_prefix) const;
+    void GenCoServicePublicMethodImpl(std::stringstream &ss, const std::string &class_name,
+                                      const ::google::protobuf::ServiceDescriptor *service) const;
+
     void GenStubDecl(std::stringstream &ss, const ::google::protobuf::ServiceDescriptor *service,
                      const std::string &name_prefix) const;
     void GenStubImpl(std::stringstream &ss, const ::google::protobuf::ServiceDescriptor *service,

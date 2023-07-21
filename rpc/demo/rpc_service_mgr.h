@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include <google/protobuf/descriptor.h>
+#include <google/protobuf/descriptor.pb.h>
 #include <google/protobuf/message.h>
 #include <google/protobuf/service.h>
 #include <google/protobuf/stubs/common.h>
@@ -19,6 +20,7 @@
 #include <mt/util/singleton.h>
 
 #include "rpc_channel.h"
+#include "rpc_options.pb.h"
 
 namespace llbc {
 class LLBC_Packet;
@@ -68,7 +70,7 @@ public:
     bool RegisterChannel(const char *ip, int32_t port);
 
     mt::Task<int> Rpc(std::uint32_t cmd, std::uint64_t uid, const ::google::protobuf::Message &req,
-                      ::google::protobuf::Message *rsp = nullptr);
+                      ::google::protobuf::Message *rsp = nullptr, std::uint32_t timeout = 0U);
 
 private:
     // 处理 RPC 请求和返回包
@@ -91,11 +93,12 @@ private:
 
 template <typename _Service>
 bool RpcServiceMgr::AddService(_Service *service) {
-    static std::uint32_t cmd = 0U;  // TODO modnarshen fix me
     const auto *service_desc = service->GetDescriptor();
     for (int i = 0; i < service_desc->method_count(); ++i) {
+        auto *method_desc = service_desc->method(i);
+        std::uint32_t cmd = method_desc->options().GetExtension(RPC_CMD);
         bool succ = service_methods_
-                        .insert({++cmd,
+                        .insert({cmd,
                                  {.service = service,
                                   .method = service_desc->method(i),
                                   .co_func = std::bind(&_Service::CallCoMethod, service, std::placeholders::_1,

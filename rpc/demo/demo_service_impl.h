@@ -21,9 +21,9 @@
 
 // ==================== PERF: AUTO GENERATE FROM PROTOC BEGIN ====================
 
-class DemoServiceStub {
-public:
-    static mt::Task<int> Echo(std::uint64_t uid, const ::protocol::EchoReq &req, ::protocol::EchoRsp *rsp = nullptr);
-};  // DemoServiceStub
+// class DemoServiceStub {
+// public:
+//     static mt::Task<int> Echo(std::uint64_t uid, const ::protocol::EchoReq &req, ::protocol::EchoRsp *rsp = nullptr);
+// };  // DemoServiceStub
 
 // ==================== PERF: AUTO GENERATE FROM PROTOC END ====================
