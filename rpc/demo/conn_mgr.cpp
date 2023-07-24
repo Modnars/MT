@@ -94,7 +94,7 @@ int ConnMgr::Init() {
 
 int ConnMgr::StartRpcService(const char *ip, int port) {
     LLOG_TRACE("ConnMgr StartRpcService");
-    LLOG_TRACE("Server Will listening in %s:%d", ip, port);
+    LLOG_TRACE("Server will listen on %s:%d", ip, port);
     int serverSessionId_ = svc_->Listen(ip, port);
     COND_RET_ELOG(serverSessionId_ == 0, LLBC_FAILED, "Create session failed, reason: %s", LLBC_FormatLastError())
 
@@ -122,10 +122,10 @@ bool ConnMgr::Tick() {
     auto packet = PopPacket();
     while (packet) {
         ret = true;
-        LLOG_INFO("Tick");
+        LLOG_TRACE("Tick");
         auto it = packetDelegs_.find(packet->GetOpcode());
         if (it == packetDelegs_.end())
-            LLOG_WARN("Recv Untapped opcode:%d", packet->GetOpcode());
+            LLOG_ERROR("Recv Untapped opcode:%d", packet->GetOpcode());
         else
             (it->second)(*packet);
 

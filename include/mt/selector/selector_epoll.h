@@ -9,8 +9,7 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 #include <vector>
-
-#include <fmt/core.h>
+#include <iostream>
 
 #include <mt/selector/event.h>
 #include <mt/util/macros.h>
@@ -37,7 +36,10 @@ public:
         events.resize(registered_event_count_);
         int ndfs = ::epoll_wait(epfd_, events.data(), registered_event_count_, time_out);
         std::vector<Event> result;
-        // TODO modnarshen ndfs might be `-1`. The comparation between `std::size_t` and `int` contains problem.
+        if (ndfs == -1) [[unlikely]] {
+            std::cerr << "error occured|errno:" << errno << std::endl;
+            return result;
+        }
         for (std::size_t i = 0; i < ndfs; ++i) {
             result.emplace_back(Event{.handle_info = *reinterpret_cast<HandleInfo *>(events[i].data.ptr)});
         }

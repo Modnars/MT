@@ -20,7 +20,6 @@ public:
 
     template <typename _Value>
     constexpr void set_value(_Value &&value) noexcept {
-        // TODO modnarshen 学习一下这种写法
         result_.template emplace<_Tp>(std::forward<_Value>(value));
     }
 

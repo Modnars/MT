@@ -10,7 +10,6 @@
 #include "conn_mgr.h"
 #include "demo.pb.h"
 #include "demo_service.pb.h"
-#include "google/protobuf/service.h"
 #include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
@@ -61,36 +60,14 @@ int main(int argc, char *argv[]) {
     ret = ConnMgr::GetInst().Init();
     COND_RET_ELOG(ret != LLBC_OK, -1, "init ConnMgr failed|error: %s", LLBC_FormatLastError());
 
-    // // 创建 rpc channel
-    // RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6688);
-    // LLBC_Defer(delete channel);
-
-    // COND_RET_ELOG(!channel, -1, "CreateRpcChannel failed");
-    // LLOG_TRACE("CLIENT START!");
-
     RpcCoroMgr::GetInst().UseCoro(false);  // 客户端默认不用协程，一直阻塞等待回包
 
-#if ENABLE_CXX20_COROUTINE
     // 协程方案, 在新协程中 call rpc
     ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
     COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
     RpcServiceMgr::GetInst().RegisterChannel("127.0.0.1", 6688);
 
     mt::run(mainloop());
-#else
-    // 创建 rpc controller & stub
-    protocol::DemoService_Stub stub{channel};
-    // 直接调用方案
-    while (!stop) {
-        std::string input;
-        std::cin >> input;  // 手动阻塞
-        if (input != "\n")
-            req.set_msg(input.c_str());
-        stub.Echo(&RpcController::GetInst(), &req, &rsp, nullptr);
-        LLOG_TRACE("RECEIVED RSP: %s", rsp.msg().c_str());
-        // LLBC_Sleep(1000);
-    }
-#endif
 
     LLOG_TRACE("client stop");
 

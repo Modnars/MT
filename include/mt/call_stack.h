@@ -24,7 +24,7 @@ struct CallStackAwaiter {
 
 }  // namespace detail
 
-[[nodiscard]] detail::CallStackAwaiter dump_call_stack() {
+[[nodiscard]] inline detail::CallStackAwaiter dump_call_stack() {
     return {};
 }
 

@@ -1,23 +1,7 @@
-/*
- * @file:
- * @Author: regangcli
- * @copyright: Tencent Technology (Shenzhen) Company Limited
- * @Date: 2023-06-21 15:47:04
- * @edit: regangcli
- * @brief:
- */
 #include <llbc.h>
-#include <mt/runner.h>
 
-#include "conn_mgr.h"
-#include "demo.pb.h"
 #include "demo_service.pb.h"
 #include "macros.h"
-#include "rpc_channel.h"
-#include "rpc_coro_mgr.h"
-#include "rpc_service_mgr.h"
-
-using namespace llbc;
 
 mt::Task<int> protocol::DemoServiceImpl::Echo(::google::protobuf::RpcController *controller,
                                               const ::protocol::EchoReq &req, ::protocol::EchoRsp &rsp,

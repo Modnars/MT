@@ -78,7 +78,7 @@ private:
     void HandleRpcRsp(llbc::LLBC_Packet &packet);
 
     mt::Task<int> DealRequest(llbc::LLBC_Packet packet);
-    mt::Task<int> DealResonse(llbc::LLBC_Packet packet);
+    mt::Task<int> DealResponse(llbc::LLBC_Packet packet);
 
     // 处理 RPC 结束回调
     void OnRpcDone(const PkgHead &pkg_head, const ::google::protobuf::Message &rsp);

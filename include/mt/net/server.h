@@ -80,7 +80,6 @@ Task<Server<_ConnectCallBack>> start_server(_ConnectCallBack call_back, std::str
     ::addrinfo hints{.ai_family = AF_UNSPEC, .ai_socktype = SOCK_STREAM};
     ::addrinfo *server_info = nullptr;
     auto service = std::to_string(port);
-    // TODO modnarshen getaddrinfo is a blocking api
     COND_EXP(int ret = ::getaddrinfo(ip.data(), service.c_str(), &hints, &server_info);
              ret != 0, throw std::system_error(std::make_error_code(std::errc::address_not_available)));
     AddrinfoGuard guard(server_info);

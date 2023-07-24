@@ -12,13 +12,13 @@
 #include <fmt/color.h>
 #include <llbc.h>
 
+#include <mt/call_stack.h>
 #include <mt/runner.h>
 #include <mt/task.h>
 
 #include "conn_mgr.h"
 #include "error_code.pb.h"
 #include "google/protobuf/message.h"
-#include "llbc/core/log/LoggerMgr.h"
 #include "macros.h"
 #include "rpc_channel.h"
 #include "rpc_coro_mgr.h"
@@ -43,19 +43,6 @@ RpcServiceMgr::~RpcServiceMgr() {
     }
 }
 
-// bool RpcServiceMgr::AddService(::google::protobuf::Service *service) {
-//     // TODO modnarshen 改用一个从 service 获取 option 的方式来注册 cmd
-//     static std::uint32_t cmd = 0U;
-
-//     const auto *service_desc = service->GetDescriptor();
-//     for (int i = 0; i < service_desc->method_count(); ++i) {
-//         bool succ = services_.insert({++cmd, {service, service_desc->method(i)}}).second;
-//         COND_RET_ELOG(!succ, false, "add service failed|cmd:%u|service:%s", cmd,
-//                       service_desc->method(i)->full_name().c_str());
-//     }
-//     return true;
-// }
-
 bool RpcServiceMgr::RegisterChannel(const char *ip, int32_t port) {
     auto *channel = conn_mgr_->CreateRpcChannel(ip, port);
     COND_RET_ELOG(!channel, false, "create rpc channel failed");
@@ -76,8 +63,10 @@ mt::Task<int> RpcServiceMgr::Rpc(std::uint32_t cmd, std::uint64_t uid, const ::g
     if (rsp) {
         COND_EXP(seq_id == 0UL, channel->BlockingWaitResponse(rsp); co_return 0);  // 针对 client 先阻塞
         RpcCoroMgr::context context{.session_id = session_id_, .rsp = rsp};
+        co_await mt::dump_call_stack();
         co_await MainCoroAwaiter{seq_id, context};
         LLOG_INFO("RESUME TO CURRENT COROUTINE");
+        co_await mt::dump_call_stack();
     }
     co_return 0;
 }
@@ -88,7 +77,7 @@ void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
 }
 
 void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
-    int ret = mt::run(DealResonse(packet));
+    int ret = mt::run(DealResponse(packet));
     COND_RET_ELOG(ret != 0, , "deal response failed|ret:%d", ret);
 }
 
@@ -122,7 +111,7 @@ mt::Task<int> RpcServiceMgr::DealRequest(llbc::LLBC_Packet packet) {
     co_return 0;
 }
 
-mt::Task<int> RpcServiceMgr::DealResonse(llbc::LLBC_Packet packet) {
+mt::Task<int> RpcServiceMgr::DealResponse(llbc::LLBC_Packet packet) {
     PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
     CO_COND_RET_ELOG(ret != 0, ret, "pkg_head.FromPacket failed|ret:%d", ret);
