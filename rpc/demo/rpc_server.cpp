@@ -14,6 +14,8 @@ mt::Task<> RpcServer::serve() {
     LLOG_INFO(">>> RPC SERVER START SERVING <<<");
 
     co_await MainCoroAwaiter{true};
+    LLOG_TRACE("START LOOP");
+
     while (!stop_) {
         ConnMgr::GetInst().Tick();
         LLBC_Sleep(1);
