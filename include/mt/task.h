@@ -155,6 +155,7 @@ private:
 };
 
 static_assert(concepts::Promise<Task<>::promise_type>);
+static_assert(concepts::Promise<Task<int>::promise_type>);
 static_assert(concepts::Future<Task<>>);
 
 }  // namespace mt

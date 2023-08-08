@@ -52,9 +52,6 @@ public:
     std::coroutine_handle<> MainHandle() const { return main_handle_; }
     void SetMainHandle(std::coroutine_handle<> handle) { main_handle_ = handle; }
 
-public:
-    std::coroutine_handle<> temp_handle{};
-
 private:
     std::unordered_map<coro_uid_type, context> suspended_contexts_;
     // coro_uid generator, which could generate unique id without `0`.

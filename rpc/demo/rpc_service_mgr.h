@@ -1,11 +1,3 @@
-/*
- * @file:
- * @Author: regangcli
- * @copyright: Tencent Technology (Shenzhen) Company Limited
- * @Date: 2023-06-19 20:14:54
- * @edit: regangcli
- * @brief:
- */
 #pragma once
 
 #include <map>
@@ -28,7 +20,6 @@ class LLBC_Packet;
 
 class CtxController : public ::google::protobuf::RpcController {
 public:
-    CtxController(void *continuation) : continuation_(continuation) { }
     ~CtxController() { }
 
     virtual void Reset() { }
@@ -38,12 +29,6 @@ public:
     virtual void SetFailed(const std::string & /* reason */) { }
     virtual bool IsCanceled() const { return false; }
     virtual void NotifyOnCancel(::google::protobuf::Closure * /* callback */) { }
-
-    void *GetContinuation() const { return continuation_; }
-    void SetContinuation(void *continuation) { continuation_ = continuation; }
-
-private:
-    void *continuation_ = nullptr;  // 恢复执行的协程挂起点
 };
 
 class ConnMgr;
