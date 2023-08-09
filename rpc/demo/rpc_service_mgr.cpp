@@ -56,7 +56,7 @@ mt::Task<int> RpcServiceMgr::Rpc(std::uint32_t cmd, std::uint64_t uid, const ::g
         COND_EXP(seq_id == 0UL, channel->BlockingWaitResponse(rsp); co_return 0);  // 针对 client 先阻塞
         RpcCoroMgr::context context{.session_id = session_id_, .rsp = rsp};
         co_await mt::dump_call_stack();
-        co_await MainCoroAwaiter{seq_id, context};
+        co_await SaveContextAwaiter{seq_id, context};
         LLOG_INFO("RESUME TO CURRENT COROUTINE");
         co_await mt::dump_call_stack();
     }

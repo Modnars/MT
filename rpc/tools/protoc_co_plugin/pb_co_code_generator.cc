@@ -112,7 +112,7 @@ std::string PbCoCodeGenerator::GenRpcImpl(const ::google::protobuf::FileDescript
 void PbCoCodeGenerator::GenServiceDecl(std::stringstream &ss, const ::google::protobuf::ServiceDescriptor *service,
                                        const std::string &name_prefix) const {
     // C++20 协程接口类
-    ss << "class " << service->name() << "Impl : public " << service->name() << "{\n"
+    ss << "class " << service->name() << "Impl : public " << service->name() << " {\n"
        << "protected:\n";
     for (int i = 0; i < service->method_count(); ++i) {
         std::string class_name_prefix = service->method(i)->options().GetExtension(PREFIX_NAME);
@@ -181,7 +181,7 @@ void PbCoCodeGenerator::GenCoServicePublicMethodDecl(std::stringstream &ss) cons
        << g_indent << std::string(indent_num, ' ') << "::google::protobuf::RpcController* controller,\n"
        << g_indent << std::string(indent_num, ' ') << "const ::google::protobuf::Message& request,\n"
        << g_indent << std::string(indent_num, ' ') << "::google::protobuf::Message& response,\n"
-       << g_indent << std::string(indent_num, ' ') << "::google::protobuf::Closure* done);";
+       << g_indent << std::string(indent_num, ' ') << "::google::protobuf::Closure* done);\n";
     return;
 }
 

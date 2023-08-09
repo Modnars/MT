@@ -40,20 +40,16 @@ public:
         return context{.handle = {}, .rsp = nullptr};
     }
 
-    std::coroutine_handle<> MainHandle() const { return main_handle_; }
-    void SetMainHandle(std::coroutine_handle<> handle) { main_handle_ = handle; }
-
 private:
     std::unordered_map<coro_uid_type, context> suspended_contexts_;
     // coro_uid generator, which could generate unique id without `0`.
     static coro_uid_type coro_uid_generator_;
     bool use_coro_ = false;
-    std::coroutine_handle<> main_handle_ = nullptr;
 };
 
-struct MainCoroAwaiter {
+struct SaveContextAwaiter {
 public:
-    MainCoroAwaiter(RpcCoroMgr::coro_uid_type coro_uid, RpcCoroMgr::context context)
+    SaveContextAwaiter(RpcCoroMgr::coro_uid_type coro_uid, RpcCoroMgr::context context)
         : coro_uid_(coro_uid), context_(context) { }
 
     bool await_ready() const noexcept { return false; }

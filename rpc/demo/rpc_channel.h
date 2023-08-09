@@ -16,12 +16,6 @@ class ConnMgr;
 
 static constexpr std::size_t MAX_BUFFER_SIZE = 1024UL;
 
-struct PacketHead {
-    std::string service = "";
-    std::string method = "";
-    std::uint64_t coro_uid = 0UL;
-};
-
 // LLBC_Packet:
 //
 //   0                         32                        64
