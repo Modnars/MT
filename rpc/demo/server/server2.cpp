@@ -3,7 +3,6 @@
 
 #include <fmt/core.h>
 #include <llbc.h>
-#include <mt/runner.h>
 
 #include "conn_mgr.h"
 #include "demo_service.pb.h"
@@ -53,7 +52,7 @@ int main(int argc, char *argv[]) {
     COND_RET_ELOG(ret != 0, ret, "RpcServer init failed|ret:%d", ret);
 
     RpcCoroMgr::GetInst().UseCoro(true);  // 服务端启用协程来处理请求
-    mt::run(RpcServer::GetInst().serve());
+    RpcServer::GetInst().Run();
 
     return 0;
 }

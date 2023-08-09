@@ -23,6 +23,12 @@ decltype(auto) run(_Task &&task) {
     }
 }
 
+template <concepts::SchedulableTask _Task>
+decltype(auto) sync_wait(_Task &&task) {
+    auto st = scheduled_task(std::forward<_Task>(task));
+    get_event_loop().run_until_complete();
+}
+
 }  // namespace mt
 
 #endif  // _MT_RUNNER_H

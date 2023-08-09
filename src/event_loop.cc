@@ -5,7 +5,7 @@
  */
 #include <chrono>
 #include <optional>
-#include <iostream>
+#include <cstdio>
 
 #include <mt/event_loop.h>
 
@@ -59,7 +59,7 @@ void EventLoop::run_once() {
         if (auto iter = cancelled_.find(handle_id); iter != cancelled_.end()) {
             cancelled_.erase(iter);
         } else {
-            std::cout << "\033[1;31mhandle " << handle->handle_id() << " is running.\033[0m" << std::endl;
+            printf("\033[1;31m[RUNNING] handle<%lu>\033[0m\n", handle->handle_id());
             handle->set_state(Handle::STATE::UNSCHEDULED);
             handle->run();
         }

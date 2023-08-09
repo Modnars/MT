@@ -1,11 +1,3 @@
-/*
- * @file:
- * @Author: regangcli
- * @copyright: Tencent Technology (Shenzhen) Company Limited
- * @Date: 2023-06-15 20:21:17
- * @edit: regangcli
- * @brief:
- */
 #include <coroutine>
 
 #include <llbc.h>

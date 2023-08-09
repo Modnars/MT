@@ -21,7 +21,10 @@ public:
 
     void Stop() { stop_ = true; }
 
-    mt::Task<> serve();
+    void Run();
+
+private:
+    mt::Task<> Serve();
 
 private:
     bool stop_ = true;

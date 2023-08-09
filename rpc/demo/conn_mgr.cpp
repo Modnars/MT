@@ -1,11 +1,3 @@
-/*
- * @file:
- * @Author: regangcli
- * @copyright: Tencent Technology (Shenzhen) Company Limited
- * @Date: 2023-06-19 20:34:15
- * @edit: regangcli
- * @brief:
- */
 #include "conn_mgr.h"
 #include "llbc/common/Define.h"
 #include "llbc/core/log/LoggerMgr.h"

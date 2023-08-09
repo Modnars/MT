@@ -106,7 +106,7 @@ public:
 public:
     explicit Task(coro_handle h) noexcept : handle_(h) { }
     Task(Task &&t) noexcept : handle_(std::exchange(t.handle_, {})) { }
-    ~Task() { destroy(); }
+    ~Task() { }  // For coro resume, no gc.
 
     decltype(auto) result() & { return handle_.promise().result(); }
 
@@ -136,7 +136,6 @@ public:
         return AwaiterImpl{handle_};
     }
 
-    HandleId id() const { return handle_.promise().handle_id(); }
     bool valid() const { return handle_ != nullptr; }
     bool done() const { return handle_.done(); }
     void schedule() { handle_.promise().schedule(); }

@@ -1,11 +1,3 @@
-/*
- * @file:
- * @Author: regangcli
- * @copyright: Tencent Technology (Shenzhen) Company Limited
- * @Date: 2023-06-19 20:13:51
- * @edit: regangcli
- * @brief:
- */
 #include <cassert>
 #include <coroutine>
 
@@ -72,13 +64,11 @@ mt::Task<int> RpcServiceMgr::Rpc(std::uint32_t cmd, std::uint64_t uid, const ::g
 }
 
 void RpcServiceMgr::HandleRpcReq(LLBC_Packet &packet) {
-    int ret = mt::run(DealRequest(packet));
-    COND_RET_ELOG(ret != 0, , "deal request failed|ret:%d", ret);
+    mt::sync_wait(DealRequest(packet));
 }
 
 void RpcServiceMgr::HandleRpcRsp(LLBC_Packet &packet) {
-    int ret = mt::run(DealResponse(packet));
-    COND_RET_ELOG(ret != 0, , "deal response failed|ret:%d", ret);
+    mt::sync_wait(DealResponse(packet));
 }
 
 mt::Task<int> RpcServiceMgr::DealRequest(llbc::LLBC_Packet packet) {
@@ -128,7 +118,7 @@ mt::Task<int> RpcServiceMgr::DealResponse(llbc::LLBC_Packet packet) {
     LLOG_INFO("received rsp|address:%p|info: %s|sesson_id:%d", ctx.rsp, ctx.rsp->DebugString().c_str(), session_id_);
 
     ctx.handle.resume();
-    // TODO modnarshen 何时执行到此处？可以在此处做什么逻辑？
+    LLOG_INFO("coro is done|%u", ctx.handle.done());
     co_return 0;
 }
 

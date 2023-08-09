@@ -1,12 +1,3 @@
-/*
- * @file:
- * @Author: regangcli
- * @copyright: Tencent Technology (Shenzhen) Company Limited
- * @Date: 2023-06-20 20:13:23
- * @edit: regangcli
- * @brief:
- */
-
 #pragma once
 
 #include <coroutine>
@@ -62,28 +53,21 @@ private:
 
 struct MainCoroAwaiter {
 public:
-    MainCoroAwaiter(bool is_main) : is_main_(is_main) { }
     MainCoroAwaiter(RpcCoroMgr::coro_uid_type coro_uid, RpcCoroMgr::context context)
         : coro_uid_(coro_uid), context_(context) { }
 
     bool await_ready() const noexcept { return false; }
 
     decltype(auto) await_suspend(std::coroutine_handle<> handle) {
-        if (is_main_) {
-            LLOG_INFO("set main handle|%p", handle.address());
-            RpcCoroMgr::GetInst().SetMainHandle(handle);
-            return handle;
-        }
         LLOG_INFO("suspend coro|coro_uid:%lu|%p|rsp:%p", coro_uid_, handle.address(), context_.rsp);
         context_.handle = handle;
         RpcCoroMgr::GetInst().Suspend(coro_uid_, context_);
-        return RpcCoroMgr::GetInst().MainHandle();
+        return true;
     }
 
     void await_resume() { }
 
 private:
-    bool is_main_ = false;
     RpcCoroMgr::coro_uid_type coro_uid_ = 0UL;
     RpcCoroMgr::context context_;
 };
