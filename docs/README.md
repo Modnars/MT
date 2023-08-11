@@ -1,4 +1,1 @@
-# MT
-
-MoreFun Talents Share Project.
-
+../README.md
