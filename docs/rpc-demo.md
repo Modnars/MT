@@ -2,7 +2,7 @@
 
 ## 亮点
 
-使用 `C++20` 原生协程来实现一些常用的功能组件，并将其应用至实际的 `RPC` 场景，本项目给出了一种具体的实现应用方案。
+使用 `C++20` 原生协程来实现一些常用的功能组件，并将其应用至实际的 `RPC` 场景，本项目[^1]给出了一种具体的实现应用方案。
 
 本项目兼顾了业务开发者（库应用端）的 **易用性** 与库性能的 **高效性**。是一种将 `C++20` 协程投入实际生产落地的具体方案，对于细节拓展，也为后续开发者尽可能预留了功能拓展的可能性。
 
@@ -192,7 +192,7 @@ mt::Task<int> DemoServiceStub::Echo(std::uint64_t uid,
 }
 ```
 
-既然代码形式如此简单、结构重复性如此之强，那么这样的代码自然首选使用插件来自动生成。`protoc`[^1] 在将 `.proto` 文件生成目标的 `.pb.h`、`.pb.cc` 文件时，可以支持插件自定义插入生成业务代码，所以可以实现这样一种支持 `C++20` 协程的接口代码：
+既然代码形式如此简单、结构重复性如此之强，那么这样的代码自然首选使用插件来自动生成。`protoc`[^2] 在将 `.proto` 文件生成目标的 `.pb.h`、`.pb.cc` 文件时，可以支持插件自定义插入生成业务代码，所以可以实现这样一种支持 `C++20` 协程的接口代码：
 
 ![](.res/mt.03.drawio.png)
 
@@ -228,7 +228,7 @@ mt::Task<int> protocol::DemoServiceImpl::Echo(::google::protobuf::RpcController 
 
 ### 其他
 
-本文详述了一种 `C++20` 协程与 `RPC` 框架的结合落地方案，其使用形式与以往存在一些差异，但就**易用性**而言，是几乎没有任何减损的。对于 `C++20` 协程的**高效性**，@regangcli 给出了和传统 `libco` 实现方案的对比并有相应的具体量化数据差异对比[^2]。`C++20` 创建协程的纳秒级效率令人惊叹，对于技术的探索实践也是值得我们不断尝试的事情。
+本文详述了一种 `C++20` 协程与 `RPC` 框架的结合落地方案，其使用形式与以往存在一些差异，但就**易用性**而言，是几乎没有任何减损的。对于 `C++20` 协程的**高效性**，@regangcli 给出了和传统 `libco` 实现方案的对比并有相应的具体量化数据差异对比[^3]。`C++20` 创建协程的纳秒级效率令人惊叹，对于技术的探索实践也是值得我们不断尝试的事情。
 
 ## 参考
 
@@ -240,5 +240,6 @@ mt::Task<int> protocol::DemoServiceImpl::Echo(::google::protobuf::RpcController 
 
 - [基于C++20无栈协程与protobuf的轻量级、高性能RPC框架](https://km.woa.com/articles/show/583648)
 
-[^1]: 本项目使用的 `protoc` 版本为 `libprotoc 3.20.3`。对于 `option` 等的支持，不同版本间可能存在差异，使用时需要具体关注。
-[^2]: 参考项目 [github.com/lgc1112/cpp20coroutine-protobuf-rpc](https://github.com/lgc1112/cpp20coroutine-protobuf-rpc) 及 [项目文档](https://github.com/lgc1112/cpp20coroutine-protobuf-rpc#readme)、[博客文章](https://km.woa.com/articles/show/583648)
+[^1]: 本项目源码均已开源，仓库地址：[git.woa.com/modnarshen/MT](https://git.woa.com/modnarshen/MT)、[github](https://github.com/Modnars/MT)。
+[^2]: 本项目使用的 `protoc` 版本为 `libprotoc 3.20.3`。对于 `option` 等的支持，不同版本间可能存在差异，使用时需要具体关注。
+[^3]: 参考项目 [github.com/lgc1112/cpp20coroutine-protobuf-rpc](https://github.com/lgc1112/cpp20coroutine-protobuf-rpc) 及 [项目文档](https://github.com/lgc1112/cpp20coroutine-protobuf-rpc#readme)、[博客文章](https://km.woa.com/articles/show/583648)
