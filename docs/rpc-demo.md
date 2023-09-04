@@ -240,6 +240,8 @@ mt::Task<int> protocol::DemoServiceImpl::Echo(::google::protobuf::RpcController 
 
 - [基于C++20无栈协程与protobuf的轻量级、高性能RPC框架](https://km.woa.com/articles/show/583648)
 
-[^1]: 本项目源码均已开源，仓库地址：[git.woa.com/modnarshen/MT](https://git.woa.com/modnarshen/MT)、[github.com/Modnars/MT](https://github.com/Modnars/MT)。
-[^2]: 本项目使用的 `protoc` 版本为 `libprotoc 3.20.3`。对于 `option` 等的支持，不同版本间可能存在差异，使用时需要具体关注。
-[^3]: 参考项目 [github.com/lgc1112/cpp20coroutine-protobuf-rpc](https://github.com/lgc1112/cpp20coroutine-protobuf-rpc) 及 [项目文档](https://github.com/lgc1112/cpp20coroutine-protobuf-rpc#readme)、[博客文章](https://km.woa.com/articles/show/583648)
+[^1] 本项目源码均已开源，仓库地址：[git.woa.com/modnarshen/MT](https://git.woa.com/modnarshen/MT)、[github.com/Modnars/MT](https://github.com/Modnars/MT)。
+
+[^2] 本项目使用的 `protoc` 版本为 `libprotoc 3.20.3`。对于 `option` 等的支持，不同版本间可能存在差异，使用时需要具体关注。
+
+[^3] 参考项目 [github.com/lgc1112/cpp20coroutine-protobuf-rpc](https://github.com/lgc1112/cpp20coroutine-protobuf-rpc) 及 [项目文档](https://github.com/lgc1112/cpp20coroutine-protobuf-rpc#readme)、[博客文章](https://km.woa.com/articles/show/583648)
