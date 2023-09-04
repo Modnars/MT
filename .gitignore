@@ -18,3 +18,8 @@ rpc/demo/Makefile
 rpc/demo/core*
 
 bin
+
+# Sphinx-docs
+Makefile
+make.bat
+_*
